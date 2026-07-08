@@ -78,10 +78,8 @@ const BADGES = [
   { Icon: Package, label: "Fewer printing mistakes" },
 ];
 
-const WORKFLOW_SCROLL_HEIGHT_VH = (STEPS.length - 1) * 120 + 100;
-const CROSSING_VISIBILITY_RANGE = 1.08;
-
-type CrossingItemKind = "copy" | "card";
+const WORKFLOW_DESKTOP_SECTION_HEIGHT_VH = STEPS.length * 100;
+const WORKFLOW_SNAP_DURATION_MS = 1350;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -113,46 +111,72 @@ function getStepFromScroll(scrollStep: number) {
   return Math.round(clamp(scrollStep, 0, STEPS.length - 1));
 }
 
-function getCrossingStyle(relative: number, targetSide: -1 | 1, kind: CrossingItemKind): CSSProperties {
-  const distance = clamp(Math.abs(relative), 0, 1);
-  const isIncoming = relative > 0;
-  const targetX = targetSide * (kind === "copy" ? 25.5 : 24);
-  const originX = -targetX;
-  const handoffDelay = 0.18;
-  const travel = isIncoming
-    ? easeInOutCubic(clamp((1 - distance - handoffDelay) / (1 - handoffDelay), 0, 1))
-    : easeInOutCubic(clamp(distance / (1 - handoffDelay), 0, 1));
-  const x = isIncoming
-    ? lerp(originX, targetX, travel)
-    : lerp(targetX, originX, travel);
-  const crossingY = kind === "card" ? 118 : 132;
-  const y = isIncoming
-    ? lerp(-crossingY, 0, travel)
-    : lerp(0, crossingY, travel);
-  const minScale = kind === "card" ? 0.52 : 0.78;
-  const focus = isIncoming ? travel : 1 - travel;
-  const scale = isIncoming
-    ? lerp(minScale, 1, travel)
-    : lerp(1, minScale, travel);
-  const opacity = isIncoming
-    ? smoothstep(0.02, 0.38, travel)
-    : 1 - smoothstep(0.64, 1, travel);
-  const rotationStrength = (1 - focus) * targetSide;
-  const rotateY = kind === "card" ? rotationStrength * (isIncoming ? -18 : 18) : rotationStrength * (isIncoming ? 9 : -9);
-  const rotateZ = kind === "card" ? rotationStrength * (isIncoming ? -5 : 5) : rotationStrength * (isIncoming ? 3 : -3);
-  const brightness = lerp(0.62, 1, focus);
-  const saturate = lerp(0.72, 1.08, focus);
-  const blur = lerp(2.2, 0, focus);
+function getWorkflowCopyStationStyle(relative: number): CSSProperties {
+  const focus = 1 - clamp(Math.abs(relative), 0, 1);
+  const emphasis = easeOutCubic(focus);
 
   return {
-    opacity,
-    pointerEvents: focus > 0.82 ? "auto" : "none",
-    transform: `translate(calc(-50% + ${x}vw), calc(-50% + ${y}px)) scale(${scale}) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`,
+    opacity: lerp(0.62, 1, emphasis),
+    filter: `brightness(${lerp(0.78, 1, emphasis)}) saturate(${lerp(0.82, 1.08, emphasis)})`,
+  };
+}
+
+function getWorkflowCardStation(stepIndex: number) {
+  return {
+    x: stepIndex % 2 === 0 ? 83 : 21,
+    y: ((stepIndex + 0.5) / STEPS.length) * 100,
+  };
+}
+
+function getTravelingWorkflowCardStyle(scrollStep: number, accent: string): CSSProperties {
+  const currentStep = Math.floor(clamp(scrollStep, 0, STEPS.length - 1));
+  const nextStep = Math.min(currentStep + 1, STEPS.length - 1);
+  const localProgress = easeInOutCubic(scrollStep - currentStep);
+  const from = getWorkflowCardStation(currentStep);
+  const to = getWorkflowCardStation(nextStep);
+  const x = lerp(from.x, to.x, localProgress);
+  const y = lerp(from.y, to.y, localProgress);
+  const direction = to.x >= from.x ? 1 : -1;
+  const travelTilt = direction * Math.sin(localProgress * Math.PI) * 4.5;
+  const scale = lerp(0.88, 0.93, 1 - Math.sin(localProgress * Math.PI) * 0.5);
+
+  return {
+    left: `${x}%`,
+    top: `${y}%`,
+    transform: `translate(-50%, -50%) rotateZ(${travelTilt}deg) scale(${scale})`,
     transformOrigin: "50% 50%",
     transformStyle: "preserve-3d",
-    willChange: "transform, opacity, filter",
-    filter: `brightness(${brightness}) saturate(${saturate}) blur(${blur}px)`,
-    zIndex: Math.round(20 + opacity * 80 + (isIncoming ? 1 : 0)),
+    willChange: "left, top, transform",
+    filter: `drop-shadow(0 34px 90px ${accent}36)`,
+    zIndex: 90,
+  };
+}
+
+function getMobileWorkflowCardStation(stepIndex: number) {
+  return {
+    x: 50,
+    y: ((stepIndex + 0.74) / STEPS.length) * 100,
+  };
+}
+
+function getTravelingMobileWorkflowCardStyle(scrollStep: number, accent: string): CSSProperties {
+  const currentStep = Math.floor(clamp(scrollStep, 0, STEPS.length - 1));
+  const nextStep = Math.min(currentStep + 1, STEPS.length - 1);
+  const localProgress = easeInOutCubic(scrollStep - currentStep);
+  const from = getMobileWorkflowCardStation(currentStep);
+  const to = getMobileWorkflowCardStation(nextStep);
+  const y = lerp(from.y, to.y, localProgress);
+  const travelTilt = Math.sin(localProgress * Math.PI) * (currentStep % 2 === 0 ? -3 : 3);
+
+  return {
+    left: `${from.x}%`,
+    top: `${y}%`,
+    transform: `translate(-50%, -50%) rotateZ(${travelTilt}deg) scale(0.62)`,
+    transformOrigin: "50% 50%",
+    transformStyle: "preserve-3d",
+    willChange: "top, transform",
+    filter: `drop-shadow(0 28px 70px ${accent}34)`,
+    zIndex: 70,
   };
 }
 
@@ -596,6 +620,20 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     controls.target.set(0, 0, 0);
     controls.update();
 
+    let isUsingControls = false;
+    const onControlsStart = () => {
+      isUsingControls = true;
+    };
+    const onControlsEnd = () => {
+      isUsingControls = false;
+    };
+    const stopCanvasWheelPropagation = (event: WheelEvent) => {
+      event.stopPropagation();
+    };
+    controls.addEventListener("start", onControlsStart);
+    controls.addEventListener("end", onControlsEnd);
+    canvas.addEventListener("wheel", stopCanvasWheelPropagation, { passive: false });
+
     let disposed = false;
     const glbItems = (WORKFLOW_GLB_GROUPS[step] ?? []).filter(item => item.url.trim());
     const shouldLoadGlbItems = glbItems.length > 0;
@@ -701,9 +739,11 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
         camera.updateProjectionMatrix();
         renderer.setSize(cssWidth, cssHeight, false);
       }
-      modelRoot.rotation.y += ((-0.42 + mouseRef.current.x * 0.26) - modelRoot.rotation.y) * 0.04;
-      modelRoot.rotation.x += ((0.12 + mouseRef.current.y * 0.12) - modelRoot.rotation.x) * 0.04;
-      modelRoot.rotation.z = Math.sin(performance.now() * 0.0008) * 0.025;
+      if (!isUsingControls) {
+        modelRoot.rotation.y += ((-0.42 + mouseRef.current.x * 0.26) - modelRoot.rotation.y) * 0.04;
+        modelRoot.rotation.x += ((0.12 + mouseRef.current.y * 0.12) - modelRoot.rotation.x) * 0.04;
+        modelRoot.rotation.z = Math.sin(performance.now() * 0.0008) * 0.025;
+      }
       modelRoot.position.y = Math.sin(performance.now() * 0.001) * 0.035;
       controls.update();
       renderer.render(scene, camera);
@@ -714,6 +754,9 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
       disposed = true;
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
+      canvas.removeEventListener("wheel", stopCanvasWheelPropagation);
+      controls.removeEventListener("start", onControlsStart);
+      controls.removeEventListener("end", onControlsEnd);
       controls.dispose();
       parent.removeEventListener("pointermove", onPointerMove);
       parent.removeEventListener("pointerleave", onPointerLeave);
@@ -723,9 +766,14 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
   }, [accent, step]);
 
   return (
-    <div className="relative h-[250px] w-full overflow-visible rounded-2xl">
+    <div data-workflow-model-stage className="relative h-[250px] w-full overflow-visible rounded-2xl">
       <div className="absolute inset-x-8 bottom-8 h-16 rounded-full blur-2xl" style={{ background: `${accent}24` }} />
-      <canvas ref={canvasRef} className="relative block h-full w-full cursor-grab active:cursor-grabbing z-10" style={{ touchAction: "none" }} />
+      <canvas
+        ref={canvasRef}
+        data-workflow-model-canvas
+        className="relative z-[1000] block h-full w-full cursor-grab active:cursor-grabbing"
+        style={{ pointerEvents: "auto", touchAction: "none" }}
+      />
     </div>
   );
 }
@@ -1156,7 +1204,7 @@ function MobileStepCard({ s, i, inView }: { s: typeof STEPS[0]; i: number; inVie
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
-function DesktopWorkflowCopy({ stepIndex }: { stepIndex: number }) {
+function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number; compact?: boolean }) {
   const col = PALETTE[stepIndex];
 
   return (
@@ -1172,7 +1220,7 @@ function DesktopWorkflowCopy({ stepIndex }: { stepIndex: number }) {
       />
       <div className="relative">
         <div
-          className="inline-flex items-center gap-2 self-start mb-6 px-3 py-1.5 rounded-full text-xs font-semibold tracking-[0.15em] uppercase"
+          className={`inline-flex items-center gap-2 self-start ${compact ? "mb-4 px-2.5 py-1" : "mb-6 px-3 py-1.5"} rounded-full text-xs font-semibold tracking-[0.15em] uppercase`}
           style={{ background: `${col.accent}15`, border: `1px solid ${col.accent}30`, color: col.accent }}
         >
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: col.accent }} />
@@ -1180,7 +1228,7 @@ function DesktopWorkflowCopy({ stepIndex }: { stepIndex: number }) {
         </div>
 
         <h2
-          className="relative font-bold text-white leading-[1.1] mb-4 text-5xl"
+          className={`relative font-bold text-white leading-[1.1] ${compact ? "mb-3 text-4xl" : "mb-4 text-5xl"}`}
           style={{
             fontFamily: '"Bricolage Grotesque", sans-serif',
             textShadow: "0 18px 45px rgba(0,0,0,0.62), 0 0 34px rgba(129,140,248,0.18)",
@@ -1190,11 +1238,11 @@ function DesktopWorkflowCopy({ stepIndex }: { stepIndex: number }) {
           <span style={gradientTextStyle(col.accent)}>Real Product</span>
         </h2>
 
-        <p className="text-slate-400 text-base leading-relaxed mb-8 max-w-md">
+        <p className={`text-slate-400 ${compact ? "text-sm mb-5" : "text-base mb-8"} leading-relaxed max-w-md`}>
           PromoPlus helps distributors move from product idea to approved artwork, production-ready files, printing, and final customer delivery.
         </p>
 
-        <div className="space-y-2.5 mb-9 max-w-md">
+        <div className={`${compact ? "space-y-1.5 mb-5" : "space-y-2.5 mb-9"} max-w-md`}>
           {STEPS.map((s, i) => (
             <div key={i} className="flex items-center gap-3 transition-colors duration-300">
               <div
@@ -1209,7 +1257,7 @@ function DesktopWorkflowCopy({ stepIndex }: { stepIndex: number }) {
                 {i < stepIndex ? <CheckCircle2 className="h-3 w-3" /> : i + 1}
               </div>
               <span
-                className="text-sm transition-colors duration-300"
+                className={`${compact ? "text-xs" : "text-sm"} transition-colors duration-300`}
                 style={{ color: i === stepIndex ? "white" : i < stepIndex ? "#b2b7bd" : "#898d92" }}
               >
                 {s.label}
@@ -1226,21 +1274,21 @@ function DesktopWorkflowCopy({ stepIndex }: { stepIndex: number }) {
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-3 mb-8">
+        <div className={`flex flex-wrap gap-3 ${compact ? "mb-5" : "mb-8"}`}>
           <button
-            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95"
+            className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95`}
             style={{ background: `linear-gradient(135deg, ${col.accent}, #8b5cf6)`, boxShadow: `0 4px 20px ${col.accent}35` }}
           >
             Book a Demo <ArrowRight className="w-4 h-4" />
           </button>
-          <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all">
+          <button className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all`}>
             <Play className="w-4 h-4" /> Watch Workflow
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 max-w-lg">
+        <div className={`grid grid-cols-2 gap-2 ${compact ? "max-w-md" : "max-w-lg"}`}>
           {BADGES.map(({ Icon, label }, i) => (
-            <div key={i} className="flex items-center gap-2 bg-white/4 border border-white/8 rounded-xl px-3 py-2.5">
+            <div key={i} className={`flex items-center gap-2 bg-white/4 border border-white/8 rounded-xl px-3 ${compact ? "py-2" : "py-2.5"}`}>
               <Icon className="w-4 h-4 text-slate-400 flex-shrink-0" />
               <span className="text-xs text-slate-400">{label}</span>
             </div>
@@ -1321,18 +1369,146 @@ function DesktopWorkflowCard({ s, i, lightPos }: { s: typeof STEPS[0]; i: number
   );
 }
 
+function DesktopWorkflowStepRow({
+  i,
+  scrollStep,
+}: {
+  i: number;
+  scrollStep: number;
+}) {
+  const cardOnLeft = i % 2 === 1;
+  const relative = i - scrollStep;
+
+  return (
+    <section
+      data-workflow-step-row={i}
+      className="relative grid grid-cols-[minmax(0,1fr)_minmax(360px,450px)] items-center gap-[clamp(3rem,7vw,7.5rem)]"
+      style={{
+        height: "100vh",
+        zIndex: 10 + i,
+      }}
+    >
+      <div
+        className={`w-full ${cardOnLeft ? "order-2" : "order-1"}`}
+        style={{
+          ...getWorkflowCopyStationStyle(relative),
+          transform: "scale(0.96)",
+          transformOrigin: cardOnLeft ? "left center" : "right center",
+        }}
+      >
+        <DesktopWorkflowCopy stepIndex={i} compact />
+      </div>
+
+      <div
+        data-workflow-card-station={i}
+        className={`h-[60vh] max-h-[440px] w-[clamp(330px,27vw,410px)] ${cardOnLeft ? "order-1" : "order-2"}`}
+        style={{
+          justifySelf: cardOnLeft ? "start" : "end",
+          opacity: 0,
+          pointerEvents: "none",
+        }}
+      />
+    </section>
+  );
+}
+
+function MobileWorkflowStepRow({ i, scrollStep }: { i: number; scrollStep: number }) {
+  const col = PALETTE[i];
+  const relative = i - scrollStep;
+  const focus = 1 - clamp(Math.abs(relative), 0, 1);
+  const emphasis = easeOutCubic(focus);
+
+  return (
+    <section
+      data-mobile-workflow-step-row={i}
+      className="relative flex min-h-[100svh] flex-col justify-start px-5 pb-[48svh] pt-7"
+      style={{
+        opacity: lerp(0.48, 1, emphasis),
+        filter: `brightness(${lerp(0.75, 1, emphasis)})`,
+      }}
+    >
+      <div className="relative">
+        <div
+          className="absolute left-[-10%] top-1/2 h-[92%] w-[116%] -translate-y-1/2 rounded-[2rem] pointer-events-none"
+          style={{
+            transform: "translateY(-50%) rotate(-2deg) skewY(-3deg)",
+            background: `radial-gradient(circle at 34% 24%, ${col.glow}, transparent 58%)`,
+            boxShadow: `0 35px 90px ${col.glow}`,
+            opacity: 0.6,
+          }}
+        />
+        <div className="relative">
+          <div
+            className="inline-flex items-center gap-2 mb-3 px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-[0.15em] uppercase"
+            style={{ background: `${col.accent}15`, border: `1px solid ${col.accent}30`, color: col.accent }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: col.accent }} />
+            How It Works
+          </div>
+
+          <h2
+            className="relative font-bold text-white leading-[1.06] mb-2 text-[clamp(2.2rem,9vw,3.25rem)]"
+            style={{
+              fontFamily: '"Bricolage Grotesque", sans-serif',
+              textShadow: "0 18px 45px rgba(0,0,0,0.62), 0 0 34px rgba(129,140,248,0.18)",
+            }}
+          >
+            From Idea to<br />
+            <span style={gradientTextStyle(col.accent)}>Real Product</span>
+          </h2>
+
+          <p className="text-slate-400 text-xs leading-relaxed mb-3 max-w-md">
+            PromoPlus helps distributors move from product idea to approved artwork, production-ready files, printing, and final customer delivery.
+          </p>
+
+          <div className="space-y-1 mb-0 max-w-md">
+            {STEPS.map((s, stepI) => (
+              <div key={stepI} className="flex items-center gap-3 transition-colors duration-300">
+                <div
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 transition-all duration-500"
+                  style={{
+                    background: stepI <= i ? col.accent : "rgba(255,255,255,0.07)",
+                    color: stepI <= i ? "#030314" : "#9fc0f0",
+                    boxShadow: stepI === i ? `0 0 14px ${col.accent}80` : "none",
+                    transform: stepI === i ? "scale(1.14)" : "scale(1)",
+                  }}
+                >
+                  {stepI < i ? <CheckCircle2 className="h-3 w-3" /> : stepI + 1}
+                </div>
+                <span
+                  className="text-[11px] transition-colors duration-300"
+                  style={{ color: stepI === i ? "white" : stepI < i ? "#b2b7bd" : "#898d92" }}
+                >
+                  {s.label}
+                </span>
+                {stepI === i && (
+                  <span
+                    className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold tracking-widest uppercase"
+                    style={{ background: `${col.accent}18`, color: col.accent }}
+                  >
+                    Active
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div data-mobile-workflow-card-station={i} className="pointer-events-none absolute bottom-[8svh] left-1/2 h-[38svh] w-[86vw] -translate-x-1/2 opacity-0" />
+    </section>
+  );
+}
+
 export default function App() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const mobileRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const scrollStepRef = useRef(0);
-  const activeStepRef = useRef(0);
+  const mobileSectionRef = useRef<HTMLDivElement>(null);
   const wheelSnapLockRef = useRef(false);
   const scrollAnimationFrameRef = useRef<number | null>(null);
   const wheelSnapTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [scrollStep, setScrollStep] = useState(0);
-  const [mobileInView, setMobileInView] = useState<boolean[]>(STEPS.map(() => false));
   // Mouse tilt for the 3D card
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   // Light position for specular reflection on card
@@ -1340,18 +1516,17 @@ export default function App() {
 
   // Scroll driver
   useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
     let frame = 0;
 
     const updateScroll = () => {
+      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      const section = isDesktop ? sectionRef.current : mobileSectionRef.current;
+      if (!section) return;
       const rect = section.getBoundingClientRect();
       const total = section.offsetHeight - window.innerHeight;
       const prog = Math.min(1, Math.max(0, -rect.top) / Math.max(total, 1));
       const stepProgress = prog * (STEPS.length - 1);
       const nextActiveStep = getStepFromScroll(stepProgress);
-      scrollStepRef.current = stepProgress;
-      activeStepRef.current = nextActiveStep;
       setScrollProgress(prog);
       setScrollStep(stepProgress);
       setActiveStep(nextActiveStep);
@@ -1375,10 +1550,11 @@ export default function App() {
     };
   }, []);
 
-  // One desktop mouse-wheel gesture advances exactly one workflow step.
+  // One desktop mouse-wheel gesture moves exactly one workflow screen.
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
+    let lastPointer = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
     const clearWheelLock = () => {
       wheelSnapLockRef.current = false;
@@ -1395,11 +1571,10 @@ export default function App() {
 
       const startTop = window.scrollY;
       const distance = targetTop - startTop;
-      const duration = 760;
       const startedAt = performance.now();
 
       const tick = (now: number) => {
-        const progress = clamp01((now - startedAt) / duration);
+        const progress = clamp01((now - startedAt) / WORKFLOW_SNAP_DURATION_MS);
         const eased = easeInOutCubic(progress);
         window.scrollTo(0, startTop + distance * eased);
 
@@ -1410,15 +1585,26 @@ export default function App() {
 
         window.scrollTo(0, targetTop);
         scrollAnimationFrameRef.current = null;
-        wheelSnapTimeoutRef.current = window.setTimeout(clearWheelLock, 260);
+        wheelSnapTimeoutRef.current = window.setTimeout(clearWheelLock, 220);
       };
 
       scrollAnimationFrameRef.current = window.requestAnimationFrame(tick);
     };
 
+    const onPointerMove = (event: PointerEvent) => {
+      lastPointer = { x: event.clientX, y: event.clientY };
+    };
+
     const onWheel = (event: WheelEvent) => {
       const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
       if (!isDesktop || Math.abs(event.deltaY) < 12) return;
+      const target = event.target instanceof Element ? event.target : null;
+      const pointerX = event.clientX || lastPointer.x;
+      const pointerY = event.clientY || lastPointer.y;
+      const pointedElement = document.elementFromPoint(pointerX, pointerY);
+      if (target?.closest("[data-workflow-model-stage]") || pointedElement?.closest("[data-workflow-model-stage]")) {
+        return;
+      }
 
       const rect = section.getBoundingClientRect();
       const sectionActive = rect.top <= 1 && rect.bottom >= window.innerHeight - 1;
@@ -1431,7 +1617,7 @@ export default function App() {
 
       const total = section.offsetHeight - window.innerHeight;
       const sectionTop = section.getBoundingClientRect().top + window.scrollY;
-      const currentProgress = Math.min(1, Math.max(0, (window.scrollY - sectionTop) / Math.max(total, 1)));
+      const currentProgress = clamp01((window.scrollY - sectionTop) / Math.max(total, 1));
       const currentStep = getStepFromScroll(currentProgress * (STEPS.length - 1));
       const direction = event.deltaY > 0 ? 1 : -1;
       const targetStep = clamp(currentStep + direction, 0, STEPS.length - 1);
@@ -1445,12 +1631,13 @@ export default function App() {
       wheelSnapLockRef.current = true;
       const targetProgress = targetStep / Math.max(STEPS.length - 1, 1);
       const targetTop = sectionTop + total * targetProgress;
-
       animateScrollToStep(targetTop);
     };
 
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("wheel", onWheel, { passive: false, capture: true });
     return () => {
+      window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("wheel", onWheel, { capture: true });
       if (scrollAnimationFrameRef.current) {
         window.cancelAnimationFrame(scrollAnimationFrameRef.current);
@@ -1459,24 +1646,13 @@ export default function App() {
     };
   }, []);
 
-  // Mobile intersection
-  useEffect(() => {
-    const obs = mobileRefs.current.map((el, i) => {
-      if (!el) return null;
-      const o = new IntersectionObserver(
-        ([e]) => setMobileInView(p => { const n = [...p]; n[i] = e.isIntersecting; return n; }),
-        { threshold: 0.3 }
-      );
-      o.observe(el);
-      return o;
-    });
-    return () => obs.forEach(o => o?.disconnect());
-  }, []);
-
   const col = PALETTE[activeStep];
 
   // Right panel mouse tracking for 3D tilt + specular
   const handlePanelMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target instanceof Element ? e.target : null;
+    if (target?.closest("[data-workflow-model-stage]")) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -1531,112 +1707,66 @@ export default function App() {
       </header>
 
       {/* ── Desktop sticky scroll section ── */}
-      <div ref={sectionRef} data-workflow-crossing className="hidden lg:block relative" style={{ height: `${WORKFLOW_SCROLL_HEIGHT_VH}vh`, zIndex: 10 }}>
-        <div className="sticky top-0 h-screen overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(100deg, rgba(129,140,248,0.055), rgba(5,5,18,0.18) 42%, rgba(5,5,18,0.04) 78%)",
-            }}
-          />
-          <div className="absolute inset-y-0 left-1/2 w-px bg-white/5" />
-          <div className="absolute inset-x-8 top-20 h-px bg-white/5" />
-          <div
-            className="absolute inset-0 pointer-events-none transition-colors duration-500"
-            style={{ background: `radial-gradient(ellipse 58% 44% at ${activeStep % 2 === 0 ? 78 : 22}% 54%, ${col.glow}, transparent 70%)` }}
-          />
-          <div className="absolute left-1/2 top-1/2 h-px w-[58vw] -translate-x-1/2 -translate-y-1/2 rotate-[31deg] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <div className="absolute left-1/2 top-1/2 h-px w-[58vw] -translate-x-1/2 -translate-y-1/2 -rotate-[31deg] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div
+        ref={sectionRef}
+        data-workflow-crossing
+        className="hidden lg:block relative overflow-hidden"
+        style={{ minHeight: `${WORKFLOW_DESKTOP_SECTION_HEIGHT_VH}vh`, zIndex: 10 }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(100deg, rgba(129,140,248,0.055), rgba(5,5,18,0.18) 42%, rgba(5,5,18,0.04) 78%)",
+          }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none transition-colors duration-500"
+          style={{ background: `radial-gradient(ellipse 58% 44% at ${activeStep % 2 === 0 ? 78 : 22}% 54%, ${col.glow}, transparent 70%)` }}
+        />
+        <div className="absolute inset-x-8 top-0 h-px bg-white/5" />
+        <div className="absolute inset-x-8 bottom-0 h-px bg-white/5" />
 
-          <div className="absolute top-6 left-8 right-8 h-px bg-white/5 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${scrollProgress * 100}%`, background: `linear-gradient(90deg, ${col.accent}, #8b5cf6)` }}
+        <div
+          className="relative mx-auto flex max-w-[1320px] flex-col px-8"
+          style={{ height: `${WORKFLOW_DESKTOP_SECTION_HEIGHT_VH}vh` }}
+        >
+          {STEPS.map((s, i) => (
+            <DesktopWorkflowStepRow
+              key={s.step}
+              i={i}
+              scrollStep={scrollStep}
             />
-          </div>
+          ))}
 
-          <div className="absolute top-10 left-1/2 -translate-x-1/2 z-40">
+          <div
+            data-workflow-card={activeStep}
+            data-workflow-card-track
+            className="absolute w-[clamp(330px,27vw,410px)]"
+            onMouseMove={handlePanelMouseMove}
+            onMouseLeave={handlePanelMouseLeave}
+            style={getTravelingWorkflowCardStyle(scrollStep, col.accent)}
+          >
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeStep}
-                initial={{ opacity: 0, y: -10, scale: 0.86 }}
+                initial={{ opacity: 0, y: 18, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.86 }}
-                transition={{ duration: 0.22 }}
-                className="px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase whitespace-nowrap"
-                style={{ background: `${col.accent}18`, border: `1px solid ${col.accent}35`, color: col.accent }}
+                exit={{ opacity: 0, y: -18, scale: 0.96 }}
+                transition={{ duration: 0.42, ease: "easeOut" }}
+                style={{ transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}
               >
-                {STEPS[activeStep].step} / {String(STEPS.length).padStart(2, "0")} - {STEPS[activeStep].label}
+                <div
+                  style={{
+                    transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+                    transformOrigin: "50% 50%",
+                    transformStyle: "preserve-3d",
+                    transition: "transform 0.14s ease-out",
+                  }}
+                >
+                  <DesktopWorkflowCard s={STEPS[activeStep]} i={activeStep} lightPos={lightPos} />
+                </div>
               </motion.div>
             </AnimatePresence>
-          </div>
-
-          <div
-            className="absolute inset-0"
-            onMouseMove={handlePanelMouseMove}
-            onMouseLeave={handlePanelMouseLeave}
-          >
-            <div
-              className="relative h-full"
-              style={{
-                perspective: "1400px",
-                transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-                transformOrigin: "50% 50%",
-                transformStyle: "preserve-3d",
-                transition: "transform 0.14s ease-out",
-              }}
-            >
-              {STEPS.map((_, i) => {
-                const relative = i - scrollStep;
-                if (Math.abs(relative) > CROSSING_VISIBILITY_RANGE) return null;
-                const copySide = i % 2 === 0 ? -1 : 1;
-
-                return (
-                  <div
-                    key={`copy-${i}`}
-                    data-workflow-copy={i}
-                    className="absolute left-1/2 top-1/2 w-[clamp(390px,34vw,520px)]"
-                    style={getCrossingStyle(relative, copySide, "copy")}
-                  >
-                    <DesktopWorkflowCopy stepIndex={i} />
-                  </div>
-                );
-              })}
-
-              {STEPS.map((s, i) => {
-                const relative = i - scrollStep;
-                if (Math.abs(relative) > CROSSING_VISIBILITY_RANGE) return null;
-                const cardSide = i % 2 === 0 ? 1 : -1;
-
-                return (
-                  <div
-                    key={`card-${i}`}
-                    data-workflow-card={i}
-                    className="absolute left-1/2 top-1/2 w-[clamp(360px,30vw,450px)]"
-                    style={getCrossingStyle(relative, cardSide, "card")}
-                  >
-                    <DesktopWorkflowCard s={s} i={i} lightPos={lightPos} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="absolute bottom-7 left-1/2 z-40 flex -translate-x-1/2 gap-2">
-            {STEPS.map((_, i) => {
-              const strength = 1 - Math.min(1, Math.abs(i - scrollStep));
-              return (
-                <div
-                  key={i}
-                  className="h-1.5 rounded-full transition-colors duration-200"
-                  style={{
-                    width: `${lerp(6, 24, easeOutCubic(strength))}px`,
-                    background: strength > 0.18 ? col.accent : "rgba(255,255,255,0.14)",
-                    boxShadow: strength > 0.65 ? `0 0 14px ${col.accent}70` : "none",
-                  }}
-                />
-              );
-            })}
           </div>
         </div>
       </div>
@@ -1872,44 +2002,47 @@ export default function App() {
       {/* ── Mobile ── */}
       </>)}
 
-      <div className="lg:hidden relative" style={{ zIndex: 10 }}>
-        <div className="px-6 pt-14 pb-10">
-          <div className="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase"
-            style={{ background: "rgba(99,102,241,0.14)", border: "1px solid rgba(99,102,241,0.3)", color: "#818cf8" }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-            How It Works
-          </div>
-          <h2 className="text-4xl font-bold text-white leading-[1.1] mb-4" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>
-            From Idea to<br />
-            <span style={gradientTextStyle("#818cf8")}>Real Product</span>
-          </h2>
-          <p className="text-slate-400 text-base leading-relaxed mb-7">
-            PromoPlus helps distributors move from product idea to approved artwork, production-ready files, printing, and final customer delivery.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 4px 20px rgba(99,102,241,0.35)" }}>
-              Book a Demo <ArrowRight className="w-4 h-4" />
-            </button>
-            <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10">
-              <Play className="w-4 h-4" /> Watch Workflow
-            </button>
-          </div>
-        </div>
-        <div className="px-4 pb-10 space-y-5">
-          {STEPS.map((s, i) => (
-            <div key={i} ref={el => { mobileRefs.current[i] = el; }}>
-              <MobileStepCard s={s} i={i} inView={mobileInView[i]} />
-            </div>
+      <div
+        ref={mobileSectionRef}
+        data-mobile-workflow-crossing
+        className="lg:hidden relative overflow-hidden"
+        style={{ minHeight: `${WORKFLOW_DESKTOP_SECTION_HEIGHT_VH}svh`, zIndex: 10 }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(100deg, rgba(129,140,248,0.055), rgba(5,5,18,0.18) 42%, rgba(5,5,18,0.04) 78%)",
+          }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none transition-colors duration-500"
+          style={{ background: `radial-gradient(ellipse 82% 40% at 50% 64%, ${col.glow}, transparent 72%)` }}
+        />
+
+        <div className="relative" style={{ height: `${WORKFLOW_DESKTOP_SECTION_HEIGHT_VH}svh` }}>
+          {STEPS.map((_, i) => (
+            <MobileWorkflowStepRow key={i} i={i} scrollStep={scrollStep} />
           ))}
-        </div>
-        <div className="px-4 pb-10 grid grid-cols-2 gap-2">
-          {BADGES.map(({ Icon, label }, i) => (
-            <div key={i} className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5">
-              <Icon className="w-4 h-4 text-slate-400 flex-shrink-0" />
-              <span className="text-xs text-slate-400">{label}</span>
-            </div>
-          ))}
+
+          <div
+            data-mobile-workflow-card={activeStep}
+            data-workflow-card-track
+            className="absolute w-[min(86vw,370px)]"
+            style={getTravelingMobileWorkflowCardStyle(scrollStep, col.accent)}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeStep}
+                initial={{ opacity: 0, y: 16, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -16, scale: 0.96 }}
+                transition={{ duration: 0.36, ease: "easeOut" }}
+                style={{ transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}
+              >
+                <DesktopWorkflowCard s={STEPS[activeStep]} i={activeStep} lightPos={lightPos} />
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
