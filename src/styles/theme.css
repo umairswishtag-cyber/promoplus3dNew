@@ -11,6 +11,10 @@ html.promoplus-theme-light #root {
   filter: invert(1) hue-rotate(180deg);
 }
 
+html.promoplus-theme-light [data-workflow-model-canvas] {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 :root {
   --font-size: 16px;
   --background: #030314;

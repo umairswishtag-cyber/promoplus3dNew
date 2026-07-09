@@ -63,10 +63,10 @@ const STEPS = [
 ];
 
 const WORKFLOW_AMBIENT_LIGHT_INTENSITIES = [
-  1.65, // Step 01: Idea
-  2.1, // Step 02: Product Selection
+  1.25, // Step 01: Idea
+  1.65, // Step 02: Product Selection
   2.068, // Step 03: Design Creation
-  10.068, // Step 04: Design Approval
+  2.068, // Step 04: Design Approval
   10.068, // Step 05: Printing & Production
   10.068, // Step 06: Final Product
 ];
