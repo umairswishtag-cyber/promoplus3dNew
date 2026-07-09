@@ -24,6 +24,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    // This stops Vite from deleting the dist folder contents
+    emptyOutDir: false, 
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory
