@@ -544,7 +544,7 @@ const WORKFLOW_GLB_GROUPS: WorkflowGlbItem[][] = [
   ],
   [
     // { url: "/assets/glb/copy_machine.glb", position: [-0.82, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 0.52 }, // Update your New GLB file 5A: Printing & Production
-    { url: "/assets/glb/exhibition_stand_012.glb", position: [0, 0.02, 0], rotation: [0.02, 0.48, 0.03], scale: 1.6 }, // Update your New GLB file 5B: Printing & Production
+    { url: "/assets/glb/exhibition_stand_012.glb", position: [0, 0.02, 0], rotation: [0, 0, 0], scale: 1.6 }, // Update your New GLB file 5B: Printing & Production
   ],
   [
     // { url: "/assets/glb/milks_and_some_juices.glb", position: [-0.82, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1.52 }, // Update your New GLB file 6A: Final Product
@@ -766,7 +766,7 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
   }, [accent, step]);
 
   return (
-    <div data-workflow-model-stage className="relative h-[250px] w-full overflow-visible rounded-2xl">
+    <div data-workflow-model-stage className="relative h-[250px] w-full overflow-visible rounded-2xl z-[1000]">
       <div className="absolute inset-x-8 bottom-8 h-16 rounded-full blur-2xl" style={{ background: `${accent}24` }} />
       <canvas
         ref={canvasRef}
