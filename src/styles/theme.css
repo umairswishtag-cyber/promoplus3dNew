@@ -1,5 +1,16 @@
 @custom-variant dark (&:is(.dark *));
 
+html.promoplus-theme-light,
+html.promoplus-theme-light body {
+  background: #f8fafc;
+}
+
+html.promoplus-theme-light #root {
+  min-height: 100vh;
+  background: #f8fafc;
+  filter: invert(1) hue-rotate(180deg);
+}
+
 :root {
   --font-size: 16px;
   --background: #030314;

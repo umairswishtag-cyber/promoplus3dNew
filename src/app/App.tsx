@@ -5,7 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import {
   ArrowRight, Play, Zap, CheckSquare, FileCheck, Package,
-  Search, Lightbulb, CheckCircle2, FileText, Printer,
+  Search, Lightbulb, CheckCircle2, FileText, Printer, Moon, Sun,
 } from "lucide-react";
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
@@ -80,6 +80,9 @@ const BADGES = [
 
 const WORKFLOW_DESKTOP_SECTION_HEIGHT_VH = STEPS.length * 100;
 const WORKFLOW_SNAP_DURATION_MS = 1350;
+const THEME_STORAGE_KEY = "promoplus-theme";
+
+type ThemeMode = "dark" | "light";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -540,7 +543,7 @@ const WORKFLOW_GLB_GROUPS: WorkflowGlbItem[][] = [
     { url: "/assets/glb/computer_and_laptop.glb", position: [0.02, 0, 0.26], rotation: [0.08, 0.1, 0], scale: 2.38 }, // Update your New GLB file 3: Design Creation
   ],
   [
-    { url: "", scale: 1 }, // Update your New GLB file 4: Design Approval
+    { url: "/assets/glb/windows_explorer.glb", position: [0.02, 0, 0.26], rotation: [5, 5.1, 0], scale: 0.75  }, // Update your New GLB file 4: Design Approval
   ],
   [
     // { url: "/assets/glb/copy_machine.glb", position: [-0.82, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 0.52 }, // Update your New GLB file 5A: Printing & Production
@@ -588,14 +591,86 @@ function prepareLoadedWorkflowModel(object: THREE.Object3D, item: WorkflowGlbIte
   return wrapper;
 }
 
+function WorkflowCanvasLoader({ accent, visible, progress }: { accent: string; visible: boolean; progress: number }) {
+  const displayProgress = Math.round(clamp01(progress) * 100);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          key="workflow-canvas-loader"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          className="absolute inset-0 z-[1200] flex items-center justify-center rounded-2xl"
+          style={{
+            background: `radial-gradient(circle at 50% 44%, ${accent}20, rgba(5,5,18,0.72) 58%, rgba(5,5,18,0.18))`,
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div className="relative flex flex-col items-center gap-3">
+            <div
+              className="absolute h-28 w-28 rounded-full blur-2xl"
+              style={{ background: `${accent}32` }}
+            />
+            <div className="relative h-24 w-24">
+              <div
+                className="absolute inset-0 rounded-full animate-spin"
+                style={{
+                  animationDuration: "1.35s",
+                  background: `conic-gradient(from 0deg, transparent 0deg, ${accent} 120deg, rgba(255,255,255,0.86) 168deg, transparent 250deg)`,
+                  WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px))",
+                  mask: "radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px))",
+                }}
+              />
+              <div
+                className="absolute inset-4 rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 34% 25%, rgba(255,255,255,0.2), rgba(5,5,18,0.86))`,
+                  border: `1px solid ${accent}4f`,
+                  boxShadow: `inset 0 1px 12px rgba(255,255,255,0.12), 0 0 28px ${accent}40`,
+                }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-mono text-xs font-black" style={{ color: accent }}>
+                  {displayProgress}%
+                </span>
+              </div>
+            </div>
+            <div className="relative text-center">
+              <div className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: accent }}>
+                Loading 3D Model
+              </div>
+              <div className="mt-1 h-1 w-36 overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  className="h-full rounded-full"
+                  animate={{ width: `${Math.max(8, displayProgress)}%` }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  style={{ background: `linear-gradient(90deg, ${accent}, #8b5cf6)` }}
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function WorkflowModelStage({ step, accent }: { step: number; accent: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
+  const [modelLoadState, setModelLoadState] = useState({ isLoading: false, progress: 1 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const parent = canvas?.parentElement;
     if (!canvas || !parent) return;
+    let disposed = false;
+    const updateLoadState = (isLoading: boolean, progress: number) => {
+      if (!disposed) setModelLoadState({ isLoading, progress: clamp01(progress) });
+    };
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
@@ -634,9 +709,9 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     controls.addEventListener("end", onControlsEnd);
     canvas.addEventListener("wheel", stopCanvasWheelPropagation, { passive: false });
 
-    let disposed = false;
     const glbItems = (WORKFLOW_GLB_GROUPS[step] ?? []).filter(item => item.url.trim());
     const shouldLoadGlbItems = glbItems.length > 0;
+    updateLoadState(shouldLoadGlbItems, shouldLoadGlbItems ? 0 : 1);
 
     const modelRoot = new THREE.Group();
     const fallbackModel = shouldLoadGlbItems ? null : createWorkflowModel(step, accent);
@@ -650,31 +725,45 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     if (shouldLoadGlbItems) {
       const loader = new GLTFLoader();
       const loadedGroup = new THREE.Group();
+      const itemProgress = new Array(glbItems.length).fill(0);
       let completedLoads = 0;
       let successfulLoads = 0;
       let swappedToGlbGroup = false;
 
+      const reportLoadProgress = () => {
+        const progress = itemProgress.reduce((sum, itemValue) => sum + itemValue, 0) / glbItems.length;
+        updateLoadState(true, Math.min(progress, 0.98));
+      };
+
       const finishLoad = () => {
         completedLoads += 1;
+        updateLoadState(completedLoads < glbItems.length, completedLoads / glbItems.length);
         if (completedLoads < glbItems.length || swappedToGlbGroup) return;
         swappedToGlbGroup = true;
 
-        if (disposed || successfulLoads === 0) {
+        if (disposed) {
           disposeObject3D(loadedGroup);
           return;
         }
 
         modelRoot.clear();
-        if (fallbackModel) {
-          disposeObject3D(fallbackModel);
+        if (successfulLoads === 0) {
+          disposeObject3D(loadedGroup);
+          modelRoot.add(createWorkflowModel(step, accent));
+          updateLoadState(false, 1);
+          return;
         }
+
+        if (fallbackModel) disposeObject3D(fallbackModel);
         modelRoot.add(loadedGroup);
+        updateLoadState(false, 1);
       };
 
-      glbItems.forEach(item => {
+      glbItems.forEach((item, itemIndex) => {
         loader.load(
           item.url.trim(),
           gltf => {
+            itemProgress[itemIndex] = 1;
             const loadedModel = prepareLoadedWorkflowModel(gltf.scene, item);
             if (disposed) {
               disposeObject3D(loadedModel);
@@ -685,8 +774,17 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
             successfulLoads += 1;
             finishLoad();
           },
-          undefined,
+          event => {
+            if (event.lengthComputable && event.total > 0) {
+              itemProgress[itemIndex] = Math.max(itemProgress[itemIndex], Math.min(event.loaded / event.total, 0.98));
+              reportLoadProgress();
+            } else {
+              itemProgress[itemIndex] = Math.max(itemProgress[itemIndex], 0.18);
+              reportLoadProgress();
+            }
+          },
           () => {
+            itemProgress[itemIndex] = 1;
             finishLoad();
           }
         );
@@ -768,6 +866,7 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
   return (
     <div data-workflow-model-stage className="relative h-[250px] w-full overflow-visible rounded-2xl z-[1000]">
       <div className="absolute inset-x-8 bottom-8 h-16 rounded-full blur-2xl" style={{ background: `${accent}24` }} />
+      <WorkflowCanvasLoader accent={accent} visible={modelLoadState.isLoading} progress={modelLoadState.progress} />
       <canvas
         ref={canvasRef}
         data-workflow-model-canvas
@@ -1513,6 +1612,17 @@ export default function App() {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   // Light position for specular reflection on card
   const [lightPos, setLightPos] = useState({ x: 50, y: 50 });
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "dark";
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("promoplus-theme-light", theme === "light");
+    document.documentElement.dataset.promoplusTheme = theme;
+    document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   // Scroll driver
   useEffect(() => {
@@ -1669,9 +1779,17 @@ export default function App() {
     setTilt({ x: 0, y: 0 });
     setLightPos({ x: 50, y: 50 });
   };
+  const toggleTheme = () => {
+    setTheme(currentTheme => (currentTheme === "dark" ? "light" : "dark"));
+  };
+  const nextThemeLabel = theme === "dark" ? "white" : "black";
 
   return (
-    <div className="bg-background text-foreground min-h-screen" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>
+    <div
+      className="promoplus-app bg-background text-foreground min-h-screen"
+      data-theme={theme}
+      style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+    >
 
       {/* Three.js floating 3D background */}
       <ThreeBackground accent={col.accent} />
@@ -1699,6 +1817,16 @@ export default function App() {
         </nav>
         <div className="flex items-center gap-3">
           <a href="#" className="hidden md:block text-sm text-slate-400 hover:text-white transition-colors">Sign in</a>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${nextThemeLabel} theme`}
+            title={`Switch to ${nextThemeLabel} theme`}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-slate-300 transition-all hover:border-white/20 hover:bg-white/10 active:scale-95"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <span className="hidden sm:inline">{theme === "dark" ? "White" : "Black"}</span>
+          </button>
           <button className="px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all hover:scale-105 active:scale-95"
             style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 4px 16px rgba(99,102,241,0.38)" }}>
             Book a Demo
