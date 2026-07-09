@@ -67,7 +67,7 @@ const WORKFLOW_AMBIENT_LIGHT_INTENSITIES = [
   1.65, // Step 02: Product Selection
   2.068, // Step 03: Design Creation
   2.068, // Step 04: Design Approval
-  10.068, // Step 05: Printing & Production
+  2.068, // Step 05: Printing & Production
   10.068, // Step 06: Final Product
 ];
 
@@ -540,10 +540,10 @@ const WORKFLOW_GLB_GROUPS: WorkflowGlbItem[][] = [
     { url: "", position: [0.12, -0.56, -0.08], rotation: [-0.04, -0.2, 0.03], scale: 0.34 }, // Update your New GLB file 2D: Product Selection
   ],
   [
-    { url: "/assets/glb/computer_and_laptop.glb", position: [0.02, 0, 0.26], rotation: [0.08, 0.1, 0], scale: 2.38 }, // Update your New GLB file 3: Design Creation
+    { url: "/assets/glb/computer_and_laptop.glb", position: [0.02, 0, 0.26], rotation: [0.08, 0.1, 0], scale: 1.38 }, // Update your New GLB file 3: Design Creation
   ],
   [
-    { url: "/assets/glb/windows_explorer.glb", position: [0.02, 0, 0.26], rotation: [5, 5.1, 0], scale: 0.75  }, // Update your New GLB file 4: Design Approval
+    { url: "/assets/glb/windows_explorer.glb", position: [0.02, 0, 0.26], rotation: [-5, -5, 0.5], scale: 0.75  }, // Update your New GLB file 4: Design Approval
   ],
   [
     // { url: "/assets/glb/copy_machine.glb", position: [-0.82, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 0.52 }, // Update your New GLB file 5A: Printing & Production
@@ -1282,7 +1282,7 @@ function MobileStepCard({ s, i, inView }: { s: typeof STEPS[0]; i: number; inVie
   const c = PALETTE[i];
   const Visual = VISUALS[i];
   return (
-    <div className="rounded-3xl p-6 relative transition-all duration-700"
+    <div data-theme-fixed-surface className="rounded-3xl p-6 relative transition-all duration-700"
       style={{ background: `linear-gradient(135deg, ${c.bg} 0%, rgba(5,5,18,0.95) 60%, ${c.bg} 100%)`, border: `1px solid ${c.border}`, boxShadow: inView ? `0 0 50px ${c.glow}, 0 16px 48px rgba(0,0,0,0.4)` : "none", opacity: inView ? 1 : 0.35, transform: inView ? "translateY(0) scale(1)" : "translateY(28px) scale(0.96)" }}>
       <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${c.accent}60, transparent)` }} />
       <div className="flex items-start gap-4 mb-5">
@@ -1337,7 +1337,7 @@ function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number
           <span style={gradientTextStyle(col.accent)}>Real Product</span>
         </h2>
 
-        <p className={`text-slate-400 ${compact ? "text-sm mb-5" : "text-base mb-8"} leading-relaxed max-w-md`}>
+        <p className={`text-slate-400 ${compact ? "text-md mb-5" : "text-base mb-8"} leading-relaxed max-w-md`}>
           PromoPlus helps distributors move from product idea to approved artwork, production-ready files, printing, and final customer delivery.
         </p>
 
@@ -1356,7 +1356,7 @@ function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number
                 {i < stepIndex ? <CheckCircle2 className="h-3 w-3" /> : i + 1}
               </div>
               <span
-                className={`${compact ? "text-xs" : "text-sm"} transition-colors duration-300`}
+                className={`${compact ? "text-md" : "text-sm"} transition-colors duration-300`}
                 style={{ color: i === stepIndex ? "white" : i < stepIndex ? "#b2b7bd" : "#898d92" }}
               >
                 {s.label}
@@ -1375,10 +1375,10 @@ function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number
 
         <div className={`flex flex-wrap gap-3 ${compact ? "mb-5" : "mb-8"}`}>
           <button
-            className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95`}
-            style={{ background: `linear-gradient(135deg, ${col.accent}, #8b5cf6)`, boxShadow: `0 4px 20px ${col.accent}35` }}
+            className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm text-white transition-all hover:scale-105 active:scale-95`}
+            style={{ background: `linear-gradient(135deg, ${col.accent}, #8b5cf6)`, textShadow: '0px 0px 0px rgba(0,0,0,0.0002) !important' }}
           >
-            Book a Demo <ArrowRight className="w-4 h-4" />
+            Book a Demo  <ArrowRight className="w-4 h-4" />
           </button>
           <button className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all`}>
             <Play className="w-4 h-4" /> Watch Workflow
@@ -1402,7 +1402,7 @@ function DesktopWorkflowCard({ s, i, lightPos }: { s: typeof STEPS[0]; i: number
   const c = PALETTE[i];
 
   return (
-    <div className="relative w-full">
+    <div data-theme-fixed-surface className="relative w-full">
       <div
         className="absolute inset-3 rounded-3xl pointer-events-none"
         style={{
@@ -1756,6 +1756,187 @@ export default function App() {
     };
   }, []);
 
+  // One mobile swipe gesture moves exactly one workflow screen.
+  useEffect(() => {
+    const section = mobileSectionRef.current;
+    if (!section) return;
+    let nativeScrollSettleTimeout: ReturnType<typeof window.setTimeout> | null = null;
+    let lastNativeScrollY = window.scrollY;
+
+    const clearMobileLock = () => {
+      wheelSnapLockRef.current = false;
+      lastNativeScrollY = window.scrollY;
+      if (wheelSnapTimeoutRef.current) {
+        window.clearTimeout(wheelSnapTimeoutRef.current);
+        wheelSnapTimeoutRef.current = null;
+      }
+      if (nativeScrollSettleTimeout) {
+        window.clearTimeout(nativeScrollSettleTimeout);
+        nativeScrollSettleTimeout = null;
+      }
+    };
+
+    const animateScrollToStep = (targetTop: number) => {
+      if (scrollAnimationFrameRef.current) {
+        window.cancelAnimationFrame(scrollAnimationFrameRef.current);
+      }
+
+      const startTop = window.scrollY;
+      const distance = targetTop - startTop;
+      const startedAt = performance.now();
+
+      const tick = (now: number) => {
+        const progress = clamp01((now - startedAt) / WORKFLOW_SNAP_DURATION_MS);
+        const eased = easeInOutCubic(progress);
+        window.scrollTo(0, startTop + distance * eased);
+        syncMobileScrollState();
+
+        if (progress < 1) {
+          scrollAnimationFrameRef.current = window.requestAnimationFrame(tick);
+          return;
+        }
+
+        window.scrollTo(0, targetTop);
+        syncMobileScrollState();
+        scrollAnimationFrameRef.current = null;
+        wheelSnapTimeoutRef.current = window.setTimeout(clearMobileLock, 180);
+      };
+
+      scrollAnimationFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    const getMobileTargetTop = (direction: 1 | -1) => {
+      const total = section.offsetHeight - window.innerHeight;
+      const sectionTop = section.getBoundingClientRect().top + window.scrollY;
+      const currentProgress = clamp01((window.scrollY - sectionTop) / Math.max(total, 1));
+      const currentStep = getStepFromScroll(currentProgress * (STEPS.length - 1));
+      const targetStep = clamp(currentStep + direction, 0, STEPS.length - 1);
+      if (targetStep === currentStep) {
+        return null;
+      }
+
+      const targetProgress = targetStep / Math.max(STEPS.length - 1, 1);
+      return sectionTop + total * targetProgress;
+    };
+
+    const syncMobileScrollState = () => {
+      const total = section.offsetHeight - window.innerHeight;
+      const sectionTop = section.getBoundingClientRect().top + window.scrollY;
+      const progress = clamp01((window.scrollY - sectionTop) / Math.max(total, 1));
+      const stepProgress = progress * (STEPS.length - 1);
+      setScrollProgress(progress);
+      setScrollStep(stepProgress);
+      setActiveStep(getStepFromScroll(stepProgress));
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      const touch = event.touches[0];
+      if (isDesktop || !touch) return;
+
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target || !section.contains(target)) return;
+
+      const rect = section.getBoundingClientRect();
+      const sectionActive = rect.top <= window.innerHeight * 0.5 && rect.bottom >= window.innerHeight * 0.5;
+      const targetIsModelStage = Boolean(target.closest("[data-workflow-model-stage]"));
+
+      mobileTouchRef.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        isTracking: sectionActive,
+        hasSnapped: false,
+        targetIsModelStage,
+      };
+
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const state = mobileTouchRef.current;
+      const touch = event.touches[0];
+      if (!state.isTracking || state.targetIsModelStage || !touch) return;
+
+      const deltaX = touch.clientX - state.startX;
+      const deltaY = touch.clientY - state.startY;
+      const isVerticalSwipe = Math.abs(deltaY) > 34 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2;
+      if (!isVerticalSwipe) return;
+
+      if (wheelSnapLockRef.current) {
+        event.preventDefault();
+        return;
+      }
+
+      if (state.hasSnapped) {
+        event.preventDefault();
+        return;
+      }
+
+      const direction = deltaY < 0 ? 1 : -1;
+      const targetTop = getMobileTargetTop(direction);
+      if (targetTop === null) {
+        state.isTracking = false;
+        return;
+      }
+
+      event.preventDefault();
+      state.hasSnapped = true;
+      wheelSnapLockRef.current = true;
+      animateScrollToStep(targetTop);
+    };
+
+    const onTouchEnd = () => {
+      mobileTouchRef.current.isTracking = false;
+    };
+
+    const onNativeMobileScroll = () => {
+      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      if (isDesktop) return;
+
+      const currentY = window.scrollY;
+      const delta = currentY - lastNativeScrollY;
+      lastNativeScrollY = currentY;
+      if (Math.abs(delta) < 2 || wheelSnapLockRef.current) return;
+
+      const rect = section.getBoundingClientRect();
+      const sectionActive = rect.top <= window.innerHeight * 0.5 && rect.bottom >= window.innerHeight * 0.5;
+      if (!sectionActive) return;
+
+      const direction = delta > 0 ? 1 : -1;
+      if (nativeScrollSettleTimeout) {
+        window.clearTimeout(nativeScrollSettleTimeout);
+      }
+
+      nativeScrollSettleTimeout = window.setTimeout(() => {
+        if (wheelSnapLockRef.current) return;
+
+        const targetTop = getMobileTargetTop(direction);
+        if (targetTop === null) return;
+        if (Math.abs(window.scrollY - targetTop) < 8) return;
+
+        wheelSnapLockRef.current = true;
+        animateScrollToStep(targetTop);
+      }, 90);
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: false, capture: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
+    window.addEventListener("scroll", onNativeMobileScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart, { capture: true });
+      window.removeEventListener("touchmove", onTouchMove, { capture: true });
+      window.removeEventListener("touchend", onTouchEnd, { capture: true });
+      window.removeEventListener("touchcancel", onTouchEnd, { capture: true });
+      window.removeEventListener("scroll", onNativeMobileScroll);
+      if (scrollAnimationFrameRef.current) {
+        window.cancelAnimationFrame(scrollAnimationFrameRef.current);
+      }
+      clearMobileLock();
+    };
+  }, []);
+
   const col = PALETTE[activeStep];
 
   // Right panel mouse tracking for 3D tilt + specular
@@ -1812,12 +1993,12 @@ export default function App() {
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm text-slate-400">
           {["Features", "Workflow", "Pricing", "Customers"].map(n => (
-            <a key={n} href="#" className="hover:text-white transition-colors duration-200">{n}</a>
+            <a key={n} href="#" className="hover:text-white transition-colors duration-200">{n}6546</a>
           ))}
         </nav>
         <div className="flex items-center gap-3">
           <a href="#" className="hidden md:block text-sm text-slate-400 hover:text-white transition-colors">Sign in</a>
-          <button
+          {/* <button
             type="button"
             onClick={toggleTheme}
             aria-label={`Switch to ${nextThemeLabel} theme`}
@@ -1826,8 +2007,8 @@ export default function App() {
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             <span className="hidden sm:inline">{theme === "dark" ? "White" : "Black"}</span>
-          </button>
-          <button className="px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all hover:scale-105 active:scale-95"
+          </button> */}
+          <button className="px-4 py-2 text-sm text-white rounded-xl transition-all hover:scale-105 active:scale-95"
             style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 4px 16px rgba(99,102,241,0.38)" }}>
             Book a Demo
           </button>
@@ -1972,7 +2153,7 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap gap-3 mb-8">
-                <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95"
+                <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm text-white transition-all hover:scale-105 active:scale-95"
                   style={{ background: `linear-gradient(135deg, ${col.accent}, #8b5cf6)`, boxShadow: `0 4px 20px ${col.accent}35` }}>
                   Book a Demo <ArrowRight className="w-4 h-4" />
                 </button>
@@ -2187,8 +2368,8 @@ export default function App() {
           Join thousands of promotional product distributors using PromoPlus every day to close deals faster and reduce production errors.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4">
-          <button className="flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 8px 24px rgba(99,102,241,0.42)" }}>
+          <button className="flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm text-white transition-all hover:scale-105 active:scale-95"
+            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)"  }}>
             Book a Demo <ArrowRight className="w-4 h-4" />
           </button>
           <button className="flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 transition-all">
