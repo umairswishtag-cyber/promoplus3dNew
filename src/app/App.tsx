@@ -456,71 +456,19 @@ function createWorkflowModel(step: number, accent: string) {
   group.add(ring);
 
   if (step === 0) {
-    const shirt = createStageShirtObject(color);
-    const logo = createStageLogoObject(color);
-    const mug = createStageMugObject(color);
-    shirt.position.set(-1.35, 0.02, 0);
-    shirt.rotation.set(0.18, -0.45, -0.12);
-    shirt.scale.setScalar(0.72);
-    logo.position.set(0, 0.16, 0.15);
-    logo.scale.setScalar(0.78);
-    mug.position.set(1.35, 0.02, 0);
-    mug.rotation.set(0.18, 0.55, -0.1);
-    mug.scale.setScalar(0.74);
-    group.add(shirt, logo, mug);
+     
   } else if (step === 1) {
-    [createStageShirtObject(color), createStageMugObject(color), createToteObject(color, 0.95), createStageLogoObject(color)].forEach((item, index) => {
-      const angle = (index / 4) * Math.PI * 2 + 0.35;
-      item.position.set(Math.cos(angle) * 1.1, index % 2 ? -0.08 : 0.22, Math.sin(angle) * 0.36);
-      item.rotation.set(0.18, -angle + Math.PI / 2, index % 2 ? 0.08 : -0.08);
-      item.scale.setScalar(index === 1 ? 0.62 : 0.56);
-      group.add(item);
-    });
+    
   } else if (step === 2) {
-    const shirt = createStageShirtObject(color);
-    const logo = createLogoObject(new THREE.Color("#ffffff"), 0.82);
-    const frame = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(0.76, 0.6, 0.18)),
-      new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.75 })
-    );
-    shirt.scale.setScalar(1);
-    shirt.rotation.set(0.14, -0.32, 0.04);
-    logo.position.set(0, -0.03, 0.18);
-    logo.scale.setScalar(0.32);
-    frame.position.set(0, -0.03, 0.22);
-    group.add(shirt, logo, frame);
+     
   } else if (step === 3) {
-    const doc = createPdfObject(color);
-    const check = createCheckObject(new THREE.Color("#34d399"));
-    doc.position.x = -0.28;
-    doc.rotation.set(-0.12, -0.35, 0.08);
-    check.position.set(0.75, 0.15, 0.2);
-    check.scale.setScalar(0.78);
-    check.rotation.set(0.1, -0.1, -0.08);
-    group.add(doc, check);
+    
   } else if (step === 4) {
-    const pdf = createPdfObject(color);
-    pdf.scale.setScalar(1.08);
-    pdf.rotation.set(-0.18, -0.35, 0.04);
-    group.add(pdf);
+    
   } else if (step === 5) {
-    const printer = createPrinterObject(color);
-    printer.rotation.set(0.08, -0.34, 0.02);
-    printer.scale.setScalar(0.9);
-    group.add(printer);
+    
   } else {
-    const box = createShippingBoxObject(color);
-    const shirt = createStageShirtObject(color);
-    const mug = createStageMugObject(color);
-    box.position.set(0, -0.18, 0);
-    box.rotation.set(0.05, -0.45, 0.04);
-    shirt.position.set(-0.88, 0.34, 0.14);
-    shirt.scale.setScalar(0.52);
-    shirt.rotation.set(0.18, -0.2, -0.12);
-    mug.position.set(0.92, 0.12, 0.12);
-    mug.scale.setScalar(0.52);
-    mug.rotation.set(0.12, 0.4, 0.08);
-    group.add(box, shirt, mug);
+    
   }
 
   return group;
