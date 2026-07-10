@@ -84,6 +84,7 @@ const BADGES = [
 const WORKFLOW_DESKTOP_SECTION_HEIGHT_VH = STEPS.length * 100;
 const WORKFLOW_SNAP_DURATION_MS = 1350;
 const THEME_STORAGE_KEY = "promoplus-theme";
+const WORKFLOW_GLB_MAX_BYTES = 16 * 1024 * 1024;
 
 type ThemeMode = "dark" | "light";
 
@@ -530,14 +531,15 @@ type WorkflowGlbItem = {
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: number;
+  sizeBytes?: number;
 };
 
 const WORKFLOW_GLB_GROUPS: WorkflowGlbItem[][] = [
   [
-    { url: "/assets/glb/shortsleevetshirt.glb", position: [0, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1 }, // Update your New GLB file 1: Idea
+    { url: "/assets/glb/shortsleevetshirt.optimized.glb", position: [0, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1, sizeBytes: 8527316 }, // Update your New GLB file 1: Idea
   ],
   [
-    { url: "/assets/glb/shortsleevetshirt.glb", position: [-1.22, 0.04, 0.04], rotation: [0, -5.04, 0], scale: 1.20 }, // Update your New GLB file 2A: Product Selection
+    { url: "/assets/glb/shortsleevetshirt.optimized.glb", position: [-1.22, 0.04, 0.04], rotation: [0, -5.04, 0], scale: 1.20, sizeBytes: 8527316 }, // Update your New GLB file 2A: Product Selection
     { url: "/assets/glb/nescafe_coffee_cups_coffee.glb", position: [0.74, -0.02, 0.12], rotation: [0, 0.48, 0.03], scale: 0.58 }, // Update your New GLB file 2B: Product Selection
   ],
   [
@@ -553,6 +555,14 @@ const WORKFLOW_GLB_GROUPS: WorkflowGlbItem[][] = [
     { url: "/assets/glb/white_t-shirt_with_print.glb", position: [0, -0.02, 0.12], rotation: [0.02, 0.48, 0.03], scale: 1.068 }, // Update your New GLB file 6B: Final Product
   ],
 ];
+
+function getLoadableWorkflowGlbItems(step: number) {
+  return (WORKFLOW_GLB_GROUPS[step] ?? []).filter(item => {
+    const url = item.url.trim();
+    if (!url) return false;
+    return (item.sizeBytes ?? 0) <= WORKFLOW_GLB_MAX_BYTES;
+  });
+}
 
 function getWorkflowFlatAmbientIntensity(step: number) {
   const requestedLight = WORKFLOW_AMBIENT_LIGHT_INTENSITIES[step] ?? 2;
@@ -708,9 +718,15 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
       if (!disposed) setModelLoadState({ isLoading, progress: clamp01(progress) });
     };
 
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "low-power" });
+    } catch {
+      updateLoadState(false, 1);
+      return;
+    }
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.86;
@@ -748,8 +764,20 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     controls.addEventListener("start", onControlsStart);
     controls.addEventListener("end", onControlsEnd);
     canvas.addEventListener("wheel", stopCanvasWheelPropagation, { passive: false });
+    let contextLost = false;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      contextLost = true;
+      updateLoadState(false, 1);
+    };
+    const onContextRestored = () => {
+      contextLost = false;
+      resize();
+    };
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
 
-    const glbItems = (WORKFLOW_GLB_GROUPS[step] ?? []).filter(item => item.url.trim());
+    const glbItems = getLoadableWorkflowGlbItems(step);
     const shouldLoadGlbItems = glbItems.length > 0;
     updateLoadState(shouldLoadGlbItems, shouldLoadGlbItems ? 0 : 1);
 
@@ -888,6 +916,7 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     let frame = 0;
     const animate = () => {
       frame = requestAnimationFrame(animate);
+      if (contextLost) return;
       const cssWidth = Math.max(1, canvas.clientWidth);
       const cssHeight = Math.max(1, canvas.clientHeight);
       const pixelRatio = renderer.getPixelRatio();
@@ -912,6 +941,8 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       canvas.removeEventListener("wheel", stopCanvasWheelPropagation);
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
       controls.removeEventListener("start", onControlsStart);
       controls.removeEventListener("end", onControlsEnd);
       controls.dispose();
@@ -919,6 +950,7 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
       parent.removeEventListener("pointerleave", onPointerLeave);
       disposeObject3D(scene);
       renderer.dispose();
+      renderer.forceContextLoss();
     };
   }, [accent, step]);
 
@@ -1675,6 +1707,10 @@ export default function App() {
     if (typeof window === "undefined") return "dark";
     return window.localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
   });
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("promoplus-theme-light", theme === "light");
@@ -1682,6 +1718,14 @@ export default function App() {
     document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const updateViewportMode = () => setIsDesktopViewport(mediaQuery.matches);
+    updateViewportMode();
+    mediaQuery.addEventListener("change", updateViewportMode);
+    return () => mediaQuery.removeEventListener("change", updateViewportMode);
+  }, []);
 
   // Scroll driver
   useEffect(() => {
@@ -2030,10 +2074,6 @@ export default function App() {
       data-theme={theme}
       style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
     >
-
-      {/* Three.js floating 3D background */}
-      <ThreeBackground accent={col.accent} />
-
       {/* Ambient radial haze */}
       <div className="fixed inset-0 pointer-events-none transition-all duration-1000"
         style={{ zIndex: 2, background: `radial-gradient(ellipse 55% 45% at 78% 52%, ${col.glow}, transparent 68%)` }} />
@@ -2106,36 +2146,38 @@ export default function App() {
             />
           ))}
 
-          <div
-            data-workflow-card={activeStep}
-            data-workflow-card-track
-            className="absolute w-[clamp(330px,27vw,410px)]"
-            onMouseMove={handlePanelMouseMove}
-            onMouseLeave={handlePanelMouseLeave}
-            style={getTravelingWorkflowCardStyle(scrollStep, col.accent)}
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeStep}
-                initial={{ opacity: 0, y: 18, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -18, scale: 0.96 }}
-                transition={{ duration: 0.42, ease: "easeOut" }}
-                style={{ transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}
-              >
-                <div
-                  style={{
-                    transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-                    transformOrigin: "50% 50%",
-                    transformStyle: "preserve-3d",
-                    transition: "transform 0.14s ease-out",
-                  }}
+          {isDesktopViewport && (
+            <div
+              data-workflow-card={activeStep}
+              data-workflow-card-track
+              className="absolute w-[clamp(330px,27vw,410px)]"
+              onMouseMove={handlePanelMouseMove}
+              onMouseLeave={handlePanelMouseLeave}
+              style={getTravelingWorkflowCardStyle(scrollStep, col.accent)}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeStep}
+                  initial={{ opacity: 0, y: 18, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -18, scale: 0.96 }}
+                  transition={{ duration: 0.42, ease: "easeOut" }}
+                  style={{ transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}
                 >
-                  <DesktopWorkflowCard s={STEPS[activeStep]} i={activeStep} lightPos={lightPos} />
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+                  <div
+                    style={{
+                      transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+                      transformOrigin: "50% 50%",
+                      transformStyle: "preserve-3d",
+                      transition: "transform 0.14s ease-out",
+                    }}
+                  >
+                    <DesktopWorkflowCard s={STEPS[activeStep]} i={activeStep} lightPos={lightPos} />
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2392,25 +2434,27 @@ export default function App() {
             <MobileWorkflowStepRow key={i} i={i} scrollStep={scrollStep} />
           ))}
 
-          <div
-            data-mobile-workflow-card={activeStep}
-            data-workflow-card-track
-            className="absolute w-[min(86vw,370px)]"
-            style={getTravelingMobileWorkflowCardStyle(scrollStep, col.accent)}
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeStep}
-                initial={{ opacity: 0, y: 16, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -16, scale: 0.96 }}
-                transition={{ duration: 0.36, ease: "easeOut" }}
-                style={{ transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}
-              >
-                <DesktopWorkflowCard s={STEPS[activeStep]} i={activeStep} lightPos={lightPos} />
-              </motion.div>
-            </AnimatePresence>
-          </div>
+          {!isDesktopViewport && (
+            <div
+              data-mobile-workflow-card={activeStep}
+              data-workflow-card-track
+              className="absolute w-[min(96vw,470px)]"
+              style={getTravelingMobileWorkflowCardStyle(scrollStep, col.accent)}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeStep}
+                  initial={{ opacity: 0, y: 16, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -16, scale: 0.96 }}
+                  transition={{ duration: 0.36, ease: "easeOut" }}
+                  style={{ transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}
+                >
+                  <DesktopWorkflowCard s={STEPS[activeStep]} i={activeStep} lightPos={lightPos} />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
 
