@@ -484,10 +484,10 @@ type WorkflowGlbItem = {
 
 const WORKFLOW_GLB_GROUPS: WorkflowGlbItem[][] = [
   [
-    { url: "/assets/glb/shortsleevetshirt-optimized.glb", position: [0, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1, sizeBytes: 8527316 }, // Update your New GLB file 1: Idea
+    { url: "/assets/glb/shortsleevetshirt.glb", position: [0, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1, sizeBytes: 8527316 }, // Update your New GLB file 1: Idea
   ],
   [
-    { url: "/assets/glb/shortsleevetshirt-optimized.glb", position: [-1.22, 0.04, 0.04], rotation: [0, -5.04, 0], scale: 1.20, sizeBytes: 8527316 }, // Update your New GLB file 2A: Product Selection
+    { url: "/assets/glb/shortsleevetshirt.glb", position: [-1.22, 0.04, 0.04], rotation: [0, -5.04, 0], scale: 1.20, sizeBytes: 8527316 }, // Update your New GLB file 2A: Product Selection
     { url: "/assets/glb/nescafe_coffee_cups_coffee.glb", position: [0.74, -0.02, 0.12], rotation: [0, 0.48, 0.03], scale: 0.58 }, // Update your New GLB file 2B: Product Selection
   ],
   [
