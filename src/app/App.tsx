@@ -653,11 +653,42 @@ function WorkflowCanvasLoader({ accent, visible, progress }: { accent: string; v
 }
 
 function WorkflowModelStage({ step, accent }: { step: number; accent: string }) {
+  const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   const [modelLoadState, setModelLoadState] = useState({ isLoading: false, progress: 1 });
+  const [isStageVisible, setIsStageVisible] = useState(false);
 
   useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    if (!("IntersectionObserver" in window)) {
+      setIsStageVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsStageVisible(entry.isIntersecting);
+      },
+      {
+        root: null,
+        rootMargin: "160px 0px",
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isStageVisible) {
+      setModelLoadState({ isLoading: false, progress: 1 });
+      return;
+    }
+
     const canvas = canvasRef.current;
     const parent = canvas?.parentElement;
     if (!canvas || !parent) return;
@@ -900,12 +931,12 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
       renderer.dispose();
       renderer.forceContextLoss();
     };
-  }, [accent, step]);
+  }, [accent, step, isStageVisible]);
 
   return (
-    <div data-workflow-model-stage className="relative h-[250px] w-full overflow-visible rounded-2xl z-[1000]">
+    <div ref={stageRef} data-workflow-model-stage className="relative h-[250px] w-full overflow-visible rounded-2xl z-[1000]">
       <div className="absolute inset-x-8 bottom-8 h-16 rounded-full blur-2xl" style={{ background: `${accent}24` }} />
-      <WorkflowCanvasLoader accent={accent} visible={modelLoadState.isLoading} progress={modelLoadState.progress} />
+      <WorkflowCanvasLoader accent={accent} visible={isStageVisible && modelLoadState.isLoading} progress={modelLoadState.progress} />
       <canvas
         ref={canvasRef}
         data-workflow-model-canvas
@@ -2040,7 +2071,7 @@ export default function App() {
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm text-slate-400">
           {["Features", "Workflow", "Pricing", "Customers"].map(n => (
-            <a key={n} href="#" className="hover:text-white transition-colors duration-200">{n}6546</a>
+            <a key={n} href="#" className="hover:text-white transition-colors duration-200">{n}</a>
           ))}
         </nav>
         <div className="flex items-center gap-3">
