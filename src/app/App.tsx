@@ -63,13 +63,16 @@ const STEPS = [
 ];
 
 const WORKFLOW_AMBIENT_LIGHT_INTENSITIES = [
-  1.25, // Step 01: Idea
+  2, // Step 01: Idea
   1.65, // Step 02: Product Selection
   2.068, // Step 03: Design Creation
   2.068, // Step 04: Design Approval
   2.068, // Step 05: Printing & Production
   10.068, // Step 06: Final Product
 ];
+
+const WORKFLOW_MAX_FLAT_AMBIENT_LIGHT = 0.82;
+const WHITE_MATERIAL_CHANNEL_LIMIT = 0.94;
 
 const BADGES = [
   { Icon: Zap, label: "Faster mockups" },
@@ -531,29 +534,65 @@ type WorkflowGlbItem = {
 
 const WORKFLOW_GLB_GROUPS: WorkflowGlbItem[][] = [
   [
-    { url: "/assets/glb/white_t-shirt_with_print.glb", position: [0, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1 }, // Update your New GLB file 1: Idea
+    { url: "/assets/glb/shortsleevetshirt.glb", position: [0, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1 }, // Update your New GLB file 1: Idea
   ],
   [
-    { url: "/assets/glb/white_t-shirt_with_print.glb", position: [-1.22, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 0.92 }, // Update your New GLB file 2A: Product Selection
+    { url: "/assets/glb/shortsleevetshirt.glb", position: [-1.22, 0.04, 0.04], rotation: [0, -5.04, 0], scale: 1.20 }, // Update your New GLB file 2A: Product Selection
     { url: "/assets/glb/nescafe_coffee_cups_coffee.glb", position: [0.74, -0.02, 0.12], rotation: [0, 0.48, 0.03], scale: 0.58 }, // Update your New GLB file 2B: Product Selection
-    { url: "", position: [0.02, 0.44, -0.26], rotation: [0.08, 0.1, 0], scale: 0.38 }, // Update your New GLB file 2C: Product Selection
-    { url: "", position: [0.12, -0.56, -0.08], rotation: [-0.04, -0.2, 0.03], scale: 0.34 }, // Update your New GLB file 2D: Product Selection
   ],
   [
-    { url: "/assets/glb/computer_and_laptop.glb", position: [0.02, 0, 0.26], rotation: [0.08, 0.1, 0], scale: 1.38 }, // Update your New GLB file 3: Design Creation
+    { url: "/assets/glb/computer_and_laptop.glb", position: [0.02, 0, 0.26], rotation: [0.08, 0.1, 0], scale: 1.68 }, // Update your New GLB file 3: Design Creation
   ],
   [
-    { url: "/assets/glb/windows_explorer.glb", position: [0.02, 0, 0.26], rotation: [-5, -5, 0.5], scale: 0.75  }, // Update your New GLB file 4: Design Approval
+    { url: "/assets/glb/windows_explorer.glb", position: [0.02, 0, 0.26], rotation: [0, -3.5, 1], scale: 0.75  }, // Update your New GLB file 4: Design Approval
   ],
   [
-    // { url: "/assets/glb/copy_machine.glb", position: [-0.82, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 0.52 }, // Update your New GLB file 5A: Printing & Production
     { url: "/assets/glb/exhibition_stand_012.glb", position: [0, 0.02, 0], rotation: [0, 0, 0], scale: 1.6 }, // Update your New GLB file 5B: Printing & Production
   ],
   [
-    // { url: "/assets/glb/milks_and_some_juices.glb", position: [-0.82, 0.04, 0.04], rotation: [0.08, -0.34, -0.06], scale: 1.52 }, // Update your New GLB file 6A: Final Product
-    { url: "/assets/glb/clothes.glb", position: [0, -0.02, 0.12], rotation: [0.02, 0.48, 0.03], scale: 3.068 }, // Update your New GLB file 6B: Final Product
+    { url: "/assets/glb/white_t-shirt_with_print.glb", position: [0, -0.02, 0.12], rotation: [0.02, 0.48, 0.03], scale: 1.068 }, // Update your New GLB file 6B: Final Product
   ],
 ];
+
+function getWorkflowFlatAmbientIntensity(step: number) {
+  const requestedLight = WORKFLOW_AMBIENT_LIGHT_INTENSITIES[step] ?? 2;
+  return Math.min(WORKFLOW_MAX_FLAT_AMBIENT_LIGHT, 0.38 + requestedLight * 0.16);
+}
+
+function tuneLoadedWorkflowMaterial(material: THREE.Material) {
+  const mat = material as THREE.MeshStandardMaterial;
+
+  if (mat.map) {
+    mat.map.colorSpace = THREE.SRGBColorSpace;
+    mat.map.anisotropy = 8;
+    mat.map.needsUpdate = true;
+  }
+
+  if ("roughness" in mat && "metalness" in mat) {
+    mat.roughness = Math.max(mat.roughness ?? 0.72, 0.68);
+    mat.metalness = Math.min(mat.metalness ?? 0, 0.04);
+    mat.envMapIntensity = Math.min(mat.envMapIntensity ?? 0.5, 0.55);
+  }
+
+  if ("emissiveIntensity" in mat) {
+    mat.emissiveIntensity = 0;
+  }
+
+  if (mat.color) {
+    const isWhiteSurface = mat.color.r > 0.86 && mat.color.g > 0.86 && mat.color.b > 0.86;
+    if (isWhiteSurface) {
+      mat.color.setRGB(
+        Math.min(mat.color.r, WHITE_MATERIAL_CHANNEL_LIMIT),
+        Math.min(mat.color.g, WHITE_MATERIAL_CHANNEL_LIMIT),
+        Math.min(mat.color.b, WHITE_MATERIAL_CHANNEL_LIMIT)
+      );
+    }
+  }
+
+  mat.side = THREE.DoubleSide;
+  mat.toneMapped = true;
+  mat.needsUpdate = true;
+}
 
 function prepareLoadedWorkflowModel(object: THREE.Object3D, item: WorkflowGlbItem) {
   const wrapper = new THREE.Group();
@@ -561,18 +600,15 @@ function prepareLoadedWorkflowModel(object: THREE.Object3D, item: WorkflowGlbIte
 
   object.traverse(child => {
     const mesh = child as THREE.Mesh;
+    if (mesh.geometry && !mesh.geometry.getAttribute("normal")) {
+      mesh.geometry.computeVertexNormals();
+    }
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     if (!mesh.material) return;
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach(material => {
-      const mat = material as THREE.MeshStandardMaterial;
-      const map = mat.map ?? null;
-      if (map) {
-        map.colorSpace = THREE.SRGBColorSpace;
-        map.anisotropy = 8;
-        map.needsUpdate = true;
-      }
-      mat.side = THREE.DoubleSide;
-      mat.needsUpdate = true;
+      tuneLoadedWorkflowMaterial(material);
     });
   });
 
@@ -676,6 +712,10 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.86;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
@@ -790,15 +830,34 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
         );
       });
     }
-    scene.add(new THREE.AmbientLight(0xffffff, WORKFLOW_AMBIENT_LIGHT_INTENSITIES[step] ?? 10.068));
+    const requestedLight = WORKFLOW_AMBIENT_LIGHT_INTENSITIES[step] ?? 2;
+    scene.add(new THREE.AmbientLight(0xffffff, getWorkflowFlatAmbientIntensity(step)));
 
-    const keyLight = new THREE.PointLight(new THREE.Color(accent), 4, 14);
-    keyLight.position.set(2.5, 2.4, 3.8);
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x1a1028, 0.82);
+    scene.add(hemisphereLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.35 + requestedLight * 0.18);
+    keyLight.position.set(3.2, 4.2, 4.8);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.bias = -0.00018;
+    keyLight.shadow.normalBias = 0.035;
+    const keyShadowCamera = keyLight.shadow.camera as THREE.OrthographicCamera;
+    keyShadowCamera.left = -4;
+    keyShadowCamera.right = 4;
+    keyShadowCamera.top = 4;
+    keyShadowCamera.bottom = -4;
+    keyShadowCamera.near = 0.5;
+    keyShadowCamera.far = 12;
     scene.add(keyLight);
 
-    const fillLight = new THREE.PointLight(0xffffff, 2.4, 10);
-    fillLight.position.set(-2.8, 1.5, 2.5);
+    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.55);
+    fillLight.position.set(-3.4, 1.8, 2.2);
     scene.add(fillLight);
+
+    const rimLight = new THREE.PointLight(new THREE.Color(accent), 1.75, 12);
+    rimLight.position.set(-2.2, 2.7, -2.8);
+    scene.add(rimLight);
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
