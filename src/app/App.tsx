@@ -2012,9 +2012,9 @@ export default function App() {
     setLightPos({ x: 50, y: 50 });
   };
   const toggleTheme = () => {
-    setTheme(currentTheme => (currentTheme === "dark" ? "light" : "dark"));
+    setTheme(currentTheme => (currentTheme === "dark" ? "dark" : "dark"));
   };
-  const nextThemeLabel = theme === "dark" ? "white" : "black";
+  const nextThemeLabel = theme === "dark" ? "dark" : "black";
 
   return (
     <div
