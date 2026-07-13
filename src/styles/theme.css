@@ -19,6 +19,125 @@ html.promoplus-theme-light [data-theme-fixed-surface] [data-workflow-model-canva
   filter: none;
 }
 
+/* The light theme is intentionally flat: cards, controls, and type do not cast
+   shadows. The dark theme keeps its existing depth and glow effects. */
+html.promoplus-theme-light #root * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+html.promoplus-theme-light #root [style*="drop-shadow"] {
+  filter: none !important;
+}
+
+html.promoplus-theme-light [data-theme-toggle] {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.promoplus-theme-light [data-theme-toggle]:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}
+
+html.promoplus-theme-light :is([data-workflow-card-color="0"], [data-workflow-copy-color="0"]) {
+  --workflow-light-card: #d8d6fd;
+}
+
+html.promoplus-theme-light :is([data-workflow-card-color="1"], [data-workflow-copy-color="1"]) {
+  --workflow-light-card: #ffbd9a;
+}
+
+html.promoplus-theme-light :is([data-workflow-card-color="2"], [data-workflow-copy-color="2"]) {
+  --workflow-light-card: #99feec;
+}
+
+html.promoplus-theme-light :is([data-workflow-card-color="3"], [data-workflow-copy-color="3"]) {
+  --workflow-light-card: #c1ff00;
+}
+
+html.promoplus-theme-light [data-light-theme-decoration],
+html.promoplus-theme-light [data-light-theme-card-decoration] {
+  display: none !important;
+}
+
+html.promoplus-theme-light [data-workflow-hover-tilt] {
+  transform: none !important;
+  transition: none !important;
+}
+
+html.promoplus-theme-light [data-workflow-accent-heading] {
+  background: none !important;
+  color: var(--workflow-light-card) !important;
+  -webkit-text-fill-color: var(--workflow-light-card) !important;
+}
+
+html.promoplus-theme-light [data-workflow-step-count] {
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+html.promoplus-theme-light [data-workflow-step-count][data-active="true"] {
+  background: var(--workflow-light-card) !important;
+  border-color: transparent !important;
+  color: #111827 !important;
+}
+
+html.promoplus-theme-light [data-workflow-card-layer] {
+  background: var(--workflow-light-card) !important;
+  border-color: #111827 !important;
+}
+
+html.promoplus-theme-light [data-workflow-card-layer]:nth-of-type(2) {
+  background: #ffffff !important;
+}
+
+html.promoplus-theme-light [data-workflow-card-surface] {
+  background: var(--workflow-light-card) !important;
+  border-color: transparent !important;
+  color: #111827 !important;
+}
+
+html.promoplus-theme-light [data-workflow-card-count] {
+  background: rgba(255, 255, 255, 0.42) !important;
+  border-color: rgba(17, 24, 39, 0.16) !important;
+}
+
+html.promoplus-theme-light [data-workflow-canvas-loader] {
+  background: color-mix(in srgb, var(--workflow-light-card) 18%, white) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+html.promoplus-theme-light [data-workflow-loader-core] {
+  background: rgba(255, 255, 255, 0.68) !important;
+  border-color: rgba(17, 24, 39, 0.16) !important;
+}
+
+html.promoplus-theme-light [data-workflow-loader-track] {
+  background: rgba(17, 24, 39, 0.12) !important;
+}
+
+[data-workflow-model-stage],
+[data-workflow-model-canvas],
+[data-workflow-model-interaction] {
+  cursor: grab !important;
+}
+
+[data-workflow-model-stage]:active,
+[data-workflow-model-canvas]:active,
+[data-workflow-model-interaction]:active,
+[data-workflow-model-stage][data-dragging="true"],
+[data-workflow-model-stage][data-dragging="true"] [data-workflow-model-canvas],
+[data-workflow-model-stage][data-dragging="true"] [data-workflow-model-interaction] {
+  cursor: grabbing !important;
+}
+
+html.promoplus-theme-light [data-workflow-card-surface] :is(h1, h2, h3, h4, p, span, div) {
+  color: #111827 !important;
+}
+
 :root {
   --font-size: 16px;
   --background: #030314;

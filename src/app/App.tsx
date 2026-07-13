@@ -53,19 +53,18 @@ const SPRING = {
 // ─── Step data ────────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { step: "01", label: "Idea", heading: "Start with an Idea", text: "Start with a customer idea, product requirement, logo, or campaign brief." },
-  { step: "02", label: "Product Selection", heading: "Select the Right Product", text: "Search supplier catalogs and select the right product instantly." },
-  { step: "03", label: "Design Creation", heading: "Create the Perfect Design", text: "Upload logo, position artwork, resize, rotate, and preview the design." },
-  { step: "04", label: "Design Approval", heading: "Collect Clear Approvals", text: "Share mockups with customers and collect clear approvals online." },
-  // { step: "05", label: "HD PDF File", heading: "Generate Production Files", text: "Generate a high-quality production-ready PDF file with approved artwork." },
-  { step: "05", label: "Printing & Production", heading: "Send to Production", text: "Send the approved file to decorators or production teams with confidence." },
-  { step: "06", label: "Final Product", heading: "Deliver Branded Products", text: "Deliver finished branded products that match the approved design." },
+  { step: "01", label: "Create Project", heading: "Create a Structured Project", text: "Organize the client, product, artwork, and approval details in one clear workspace." },
+  { step: "02", label: "Product Selection", heading: "Choose the Blank Product", text: "Select the right promotional product and prepare the views needed for the customer mockup." },
+  { step: "03", label: "Design Artwork", heading: "Create the Customer Mockup", text: "Upload and position the artwork with a simple, collaboration-friendly design workflow." },
+  { step: "04", label: "Share for Approval", heading: "Share One Approval Link", text: "Let the client review, comment, and approve through a secure link without logging in." },
+  { step: "05", label: "Production Ready", heading: "Lock the Approved Artwork", text: "Keep the approved version, timestamp, and production-ready files together before printing." },
+  { step: "06", label: "Final Product", heading: "Deliver What Was Approved", text: "Send only approved artwork to production so the finished product matches the client proof." },
 ];
 
 const WORKFLOW_AMBIENT_LIGHT_INTENSITIES = [
   2, // Step 01: Idea
   1.65, // Step 02: Product Selection
-  2.068, // Step 03: Design Creation
+  3.068, // Step 03: Design Creation
   2.068, // Step 04: Design Approval
   2.068, // Step 05: Printing & Production
   10.068, // Step 06: Final Product
@@ -75,10 +74,10 @@ const WORKFLOW_MAX_FLAT_AMBIENT_LIGHT = 0.82;
 const WHITE_MATERIAL_CHANNEL_LIMIT = 0.94;
 
 const BADGES = [
-  { Icon: Zap, label: "Faster mockups" },
-  { Icon: CheckSquare, label: "Clear approvals" },
-  { Icon: FileCheck, label: "Production-ready files" },
-  { Icon: Package, label: "Fewer printing mistakes" },
+  { Icon: Zap, label: "Mockups in minutes" },
+  { Icon: CheckSquare, label: "One client link" },
+  { Icon: FileCheck, label: "Tracked approvals" },
+  { Icon: Package, label: "Approved art only" },
 ];
 
 const WORKFLOW_DESKTOP_SECTION_HEIGHT_VH = STEPS.length * 100;
@@ -593,14 +592,15 @@ function WorkflowCanvasLoader({ accent, visible, progress }: { accent: string; v
       {visible && (
         <motion.div
           key="workflow-canvas-loader"
+          data-workflow-canvas-loader
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.98 }}
           transition={{ duration: 0.24, ease: "easeOut" }}
-          className="absolute inset-0 z-[1200] flex items-center justify-center rounded-2xl"
+          className="pointer-events-none absolute inset-0 z-[1200] flex cursor-grab items-center justify-center rounded-2xl"
           style={{
-            background: `radial-gradient(circle at 50% 44%, ${accent}20, rgba(5,5,18,0.72) 58%, rgba(5,5,18,0.18))`,
-            backdropFilter: "blur(8px)",
+            background: `${accent}12`,
+            backdropFilter: "blur(4px)",
           }}
         >
           <div className="relative flex flex-col items-center gap-3">
@@ -619,11 +619,11 @@ function WorkflowCanvasLoader({ accent, visible, progress }: { accent: string; v
                 }}
               />
               <div
+                data-workflow-loader-core
                 className="absolute inset-4 rounded-full"
                 style={{
-                  background: `radial-gradient(circle at 34% 25%, rgba(255,255,255,0.2), rgba(5,5,18,0.86))`,
+                  background: "rgba(255,255,255,0.08)",
                   border: `1px solid ${accent}4f`,
-                  boxShadow: `inset 0 1px 12px rgba(255,255,255,0.12), 0 0 28px ${accent}40`,
                 }}
               />
               <div className="absolute inset-0 flex items-center justify-center">
@@ -636,12 +636,12 @@ function WorkflowCanvasLoader({ accent, visible, progress }: { accent: string; v
               <div className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: accent }}>
                 Loading 3D Model
               </div>
-              <div className="mt-1 h-1 w-36 overflow-hidden rounded-full bg-white/10">
+              <div data-workflow-loader-track className="mt-1 h-1 w-36 overflow-hidden rounded-full bg-white/10">
                 <motion.div
                   className="h-full rounded-full"
                   animate={{ width: `${Math.max(8, displayProgress)}%` }}
                   transition={{ duration: 0.22, ease: "easeOut" }}
-                  style={{ background: `linear-gradient(90deg, ${accent}, #8b5cf6)` }}
+                  style={{ background: accent }}
                 />
               </div>
             </div>
@@ -655,6 +655,7 @@ function WorkflowCanvasLoader({ accent, visible, progress }: { accent: string; v
 function WorkflowModelStage({ step, accent }: { step: number; accent: string }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const interactionRef = useRef<HTMLDivElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   const [modelLoadState, setModelLoadState] = useState({ isLoading: false, progress: 1 });
   const [isStageVisible, setIsStageVisible] = useState(false);
@@ -690,8 +691,9 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     }
 
     const canvas = canvasRef.current;
-    const parent = canvas?.parentElement;
-    if (!canvas || !parent) return;
+    const stage = stageRef.current;
+    const interactionSurface = interactionRef.current;
+    if (!canvas || !stage || !interactionSurface) return;
     let disposed = false;
     const updateLoadState = (isLoading: boolean, progress: number) => {
       if (!disposed) setModelLoadState({ isLoading, progress: clamp01(progress) });
@@ -717,7 +719,7 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     camera.position.set(0, 0.15, 4.35);
     camera.lookAt(0, 0, 0);
 
-    const controls = new OrbitControls(camera, canvas);
+    const controls = new OrbitControls(camera, interactionSurface);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
@@ -733,16 +735,20 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     let isUsingControls = false;
     const onControlsStart = () => {
       isUsingControls = true;
+      stage.dataset.dragging = "true";
+      interactionSurface.style.cursor = "grabbing";
     };
     const onControlsEnd = () => {
       isUsingControls = false;
+      delete stage.dataset.dragging;
+      interactionSurface.style.cursor = "grab";
     };
-    const stopCanvasWheelPropagation = (event: WheelEvent) => {
+    const stopStageWheelPropagation = (event: WheelEvent) => {
       event.stopPropagation();
     };
     controls.addEventListener("start", onControlsStart);
     controls.addEventListener("end", onControlsEnd);
-    canvas.addEventListener("wheel", stopCanvasWheelPropagation, { passive: false });
+    interactionSurface.addEventListener("wheel", stopStageWheelPropagation, { passive: false });
     let contextLost = false;
     const onContextLost = (event: Event) => {
       event.preventDefault();
@@ -876,12 +882,12 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
     };
 
     const resizeObserver = new ResizeObserver(resize);
-    resizeObserver.observe(parent);
+    resizeObserver.observe(stage);
     resizeObserver.observe(canvas);
     resize();
 
     const onPointerMove = (event: PointerEvent) => {
-      const rect = parent.getBoundingClientRect();
+      const rect = stage.getBoundingClientRect();
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
       mouseRef.current.y = -((event.clientY - rect.top) / rect.height - 0.5) * 2;
     };
@@ -889,8 +895,8 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
       mouseRef.current.x = 0;
       mouseRef.current.y = 0;
     };
-    parent.addEventListener("pointermove", onPointerMove);
-    parent.addEventListener("pointerleave", onPointerLeave);
+    stage.addEventListener("pointermove", onPointerMove);
+    stage.addEventListener("pointerleave", onPointerLeave);
 
     let frame = 0;
     const animate = () => {
@@ -917,16 +923,18 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
 
     return () => {
       disposed = true;
+      delete stage.dataset.dragging;
+      interactionSurface.style.cursor = "grab";
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
-      canvas.removeEventListener("wheel", stopCanvasWheelPropagation);
+      interactionSurface.removeEventListener("wheel", stopStageWheelPropagation);
       canvas.removeEventListener("webglcontextlost", onContextLost);
       canvas.removeEventListener("webglcontextrestored", onContextRestored);
       controls.removeEventListener("start", onControlsStart);
       controls.removeEventListener("end", onControlsEnd);
       controls.dispose();
-      parent.removeEventListener("pointermove", onPointerMove);
-      parent.removeEventListener("pointerleave", onPointerLeave);
+      stage.removeEventListener("pointermove", onPointerMove);
+      stage.removeEventListener("pointerleave", onPointerLeave);
       disposeObject3D(scene);
       renderer.dispose();
       renderer.forceContextLoss();
@@ -934,14 +942,30 @@ function WorkflowModelStage({ step, accent }: { step: number; accent: string }) 
   }, [accent, step, isStageVisible]);
 
   return (
-    <div ref={stageRef} data-workflow-model-stage className="relative h-[250px] w-full overflow-visible rounded-2xl z-[1000]">
+    <div
+      ref={stageRef}
+      data-workflow-model-stage
+      className="relative z-10 h-[250px] w-full cursor-grab select-none overflow-visible rounded-2xl active:cursor-grabbing lg:h-[310px]"
+      style={{ touchAction: "none" }}
+    >
       <div className="absolute inset-x-8 bottom-8 h-16 rounded-full blur-2xl" style={{ background: `${accent}24` }} />
       <WorkflowCanvasLoader accent={accent} visible={isStageVisible && modelLoadState.isLoading} progress={modelLoadState.progress} />
       <canvas
         ref={canvasRef}
         data-workflow-model-canvas
-        className="relative z-[1000] block h-full w-full cursor-grab active:cursor-grabbing"
-        style={{ pointerEvents: "auto", touchAction: "none" }}
+        aria-label="Interactive 3D product model. Drag to rotate."
+        title="Drag to rotate the product"
+        className="relative z-10 block h-full w-full"
+        style={{ pointerEvents: "none" }}
+      />
+      <div
+        ref={interactionRef}
+        data-workflow-model-interaction
+        role="application"
+        aria-label="Rotate the 3D product model"
+        title="Drag to rotate the product"
+        className="absolute inset-0 z-20 cursor-grab rounded-2xl active:cursor-grabbing"
+        style={{ cursor: "grab", pointerEvents: "auto", touchAction: "none" }}
       />
     </div>
   );
@@ -1352,7 +1376,11 @@ function MobileStepCard({ s, i, inView }: { s: typeof STEPS[0]; i: number; inVie
   const c = PALETTE[i];
   const Visual = VISUALS[i];
   return (
-    <div data-theme-fixed-surface className="rounded-3xl p-6 relative transition-all duration-700"
+    <div
+      data-theme-fixed-surface
+      data-workflow-card-color={i % 4}
+      data-workflow-card-surface
+      className="rounded-3xl p-6 relative transition-all duration-700"
       style={{ background: `linear-gradient(135deg, ${c.bg} 0%, rgba(5,5,18,0.95) 60%, ${c.bg} 100%)`, border: `1px solid ${c.border}`, boxShadow: inView ? `0 0 50px ${c.glow}, 0 16px 48px rgba(0,0,0,0.4)` : "none", opacity: inView ? 1 : 0.35, transform: inView ? "translateY(0) scale(1)" : "translateY(28px) scale(0.96)" }}>
       <div className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${c.accent}60, transparent)` }} />
       <div className="flex items-start gap-4 mb-5">
@@ -1377,8 +1405,9 @@ function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number
   const col = PALETTE[stepIndex];
 
   return (
-    <div className="relative w-full">
+    <div data-workflow-copy-color={stepIndex % 4} className="relative w-full">
       <div
+        data-light-theme-decoration
         className="absolute left-[-8%] top-1/2 h-[72%] w-[96%] -translate-y-1/2 rounded-[2rem] pointer-events-none"
         style={{
           transform: "translateY(-50%) rotate(-2deg) skewY(-3deg)",
@@ -1403,18 +1432,27 @@ function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number
             textShadow: "0 18px 45px rgba(0,0,0,0.62), 0 0 34px rgba(129,140,248,0.18)",
           }}
         >
-          From Idea to<br />
-          <span style={gradientTextStyle(col.accent)}>Real Product</span>
+          From Idea to Mockup<br />
+          <span
+            data-theme-fixed-surface
+            data-workflow-accent-heading
+            style={gradientTextStyle(col.accent)}
+          >
+            All in One Flow
+          </span>
         </h2>
 
-        <p className={`text-slate-400 ${compact ? "text-md mb-5" : "text-base mb-8"} leading-relaxed max-w-md`}>
-          PromoPlus helps distributors move from product idea to approved artwork, production-ready files, printing, and final customer delivery.
+        <p className={`text-slate-50 ${compact ? "text-lg mb-5" : "text-base mb-8"} leading-relaxed max-w-md`}>
+          Create your project, design the product, generate a customer-ready mockup, and collect clear approval in one structured flow.
         </p>
 
         <div className={`${compact ? "space-y-1.5 mb-5" : "space-y-2.5 mb-9"} max-w-md`}>
           {STEPS.map((s, i) => (
             <div key={i} className="flex items-center gap-3 transition-colors duration-300">
               <div
+                data-theme-fixed-surface
+                data-workflow-step-count
+                data-active={i === stepIndex}
                 className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all duration-500"
                 style={{
                   background: i <= stepIndex ? col.accent : "rgba(255,255,255,0.07)",
@@ -1444,14 +1482,11 @@ function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number
         </div>
 
         <div className={`flex flex-wrap gap-3 ${compact ? "mb-5" : "mb-8"}`}>
-          <button
-            className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm text-white transition-all hover:scale-105 active:scale-95`}
-            style={{ background: `linear-gradient(135deg, ${col.accent}, #8b5cf6)`, textShadow: '0px 0px 0px rgba(0,0,0,0.0002) !important' }}
-          >
+           <button className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all`}>
             Book a Demo  <ArrowRight className="w-4 h-4" />
           </button>
           <button className={`flex items-center gap-2 ${compact ? "px-4 py-2.5" : "px-5 py-3"} rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all`}>
-            <Play className="w-4 h-4" /> Watch Workflow
+            <Play className="w-4 h-4" /> See How It Works
           </button>
         </div>
 
@@ -1472,8 +1507,9 @@ function DesktopWorkflowCard({ s, i, lightPos }: { s: typeof STEPS[0]; i: number
   const c = PALETTE[i];
 
   return (
-    <div data-theme-fixed-surface className="relative w-full">
-      <div
+    <div data-theme-fixed-surface data-workflow-card-color={i % 4} className="relative w-full">
+      {/* <div
+        data-workflow-card-layer
         className="absolute inset-3 rounded-3xl pointer-events-none"
         style={{
           transform: "translate(18px, 22px) scale(0.985)",
@@ -1481,39 +1517,39 @@ function DesktopWorkflowCard({ s, i, lightPos }: { s: typeof STEPS[0]; i: number
           border: `1px solid ${c.border}`,
           boxShadow: `0 34px 90px ${c.glow}`,
         }}
-      />
-      <div
+      /> */}
+      {/* <div
+        data-workflow-card-layer
         className="absolute inset-6 rounded-3xl pointer-events-none"
         style={{
           transform: "translate(36px, 44px) scale(0.96)",
           background: "rgba(255,255,255,0.035)",
           border: "1px solid rgba(255,255,255,0.06)",
         }}
-      />
+      /> */}
 
       <div
+        data-workflow-card-surface
         className="w-full rounded-3xl p-7 relative overflow-hidden"
         style={{
           background: `linear-gradient(145deg, ${c.bg} 0%, rgba(5,5,18,0.96) 50%, ${c.bg} 100%)`,
-          border: `1px solid ${c.border}`,
+          border: `0px solid ${c.border}`,
           boxShadow: `0 0 120px ${c.glow}, 0 52px 110px rgba(0,0,0,0.72), -18px -14px 45px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -22px 55px rgba(0,0,0,0.35)`,
         }}
       >
         <div
+          data-light-theme-card-decoration
           className="absolute inset-x-0 top-0 h-px pointer-events-none rounded-t-3xl"
           style={{ background: `linear-gradient(90deg, transparent 5%, ${c.accent}80 45%, ${c.accent}80 55%, transparent 95%)` }}
         />
         <div
+          data-light-theme-card-decoration
           className="absolute inset-0 rounded-3xl pointer-events-none"
           style={{ background: `radial-gradient(circle at ${lightPos.x}% ${lightPos.y}%, rgba(255,255,255,0.07) 0%, transparent 55%)`, transition: "background 0.12s ease-out" }}
         />
-        <div
-          className="absolute top-5 right-5 w-2 h-2 rounded-full pointer-events-none"
-          style={{ background: c.accent, boxShadow: `0 0 10px ${c.accent}` }}
-        />
-
         <div className="flex items-start gap-4 mb-6">
           <div
+            data-workflow-card-count
             className="w-14 h-14 rounded-2xl flex items-center justify-center text-base font-black flex-shrink-0 font-mono"
             style={{ background: `${c.accent}18`, color: c.accent, border: `1.5px solid ${c.border}`, boxShadow: `0 0 22px ${c.accent}28` }}
           >
@@ -1525,7 +1561,7 @@ function DesktopWorkflowCard({ s, i, lightPos }: { s: typeof STEPS[0]; i: number
           </div>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 relative" style={{ zIndex: 1000000, width: "100%", height: "100%" }}>
           <WorkflowModelStage step={i} accent={c.accent} />
         </div>
 
@@ -1551,7 +1587,7 @@ function DesktopWorkflowStepRow({
   return (
     <section
       data-workflow-step-row={i}
-      className="relative grid grid-cols-[minmax(0,1fr)_minmax(360px,450px)] items-center gap-[clamp(3rem,7vw,7.5rem)]"
+      className="relative grid grid-cols-[minmax(0,1fr)_minmax(430px,520px)] items-center gap-[clamp(2.5rem,5vw,6rem)]"
       style={{
         height: "100vh",
         zIndex: 10 + i,
@@ -1570,11 +1606,12 @@ function DesktopWorkflowStepRow({
 
       <div
         data-workflow-card-station={i}
-        className={`h-[60vh] max-h-[440px] w-[clamp(330px,27vw,410px)] ${cardOnLeft ? "order-1" : "order-2"}`}
+        className={`h-[68vh] max-h-[540px] w-[clamp(410px,32vw,500px)] ${cardOnLeft ? "order-1" : "order-2"}`}
         style={{
           justifySelf: cardOnLeft ? "start" : "end",
           opacity: 0,
           pointerEvents: "none",
+          zIndex: 10000,
         }}
       />
     </section>
@@ -1590,6 +1627,7 @@ function MobileWorkflowStepRow({ i, scrollStep }: { i: number; scrollStep: numbe
   return (
     <section
       data-mobile-workflow-step-row={i}
+      data-workflow-copy-color={i % 4}
       className="relative flex min-h-[100svh] flex-col justify-start px-5 pb-[48svh] pt-7"
       style={{
         opacity: lerp(0.48, 1, emphasis),
@@ -1598,6 +1636,7 @@ function MobileWorkflowStepRow({ i, scrollStep }: { i: number; scrollStep: numbe
     >
       <div className="relative">
         <div
+          data-light-theme-decoration
           className="absolute left-[-10%] top-1/2 h-[92%] w-[116%] -translate-y-1/2 rounded-[2rem] pointer-events-none"
           style={{
             transform: "translateY(-50%) rotate(-2deg) skewY(-3deg)",
@@ -1622,18 +1661,27 @@ function MobileWorkflowStepRow({ i, scrollStep }: { i: number; scrollStep: numbe
               textShadow: "0 18px 45px rgba(0,0,0,0.62), 0 0 34px rgba(129,140,248,0.18)",
             }}
           >
-            From Idea to<br />
-            <span style={gradientTextStyle(col.accent)}>Real Product</span>
+            From Idea to Mockup<br />
+            <span
+              data-theme-fixed-surface
+              data-workflow-accent-heading
+              style={gradientTextStyle(col.accent)}
+            >
+              All in One Flow
+            </span>
           </h2>
 
           <p className="text-slate-400 text-xs leading-relaxed mb-3 max-w-md">
-            PromoPlus helps distributors move from product idea to approved artwork, production-ready files, printing, and final customer delivery.
+            Create the project, design the mockup, and collect clear customer approval in one structured flow.
           </p>
 
           <div className="space-y-1 mb-0 max-w-md">
             {STEPS.map((s, stepI) => (
               <div key={stepI} className="flex items-center gap-3 transition-colors duration-300">
                 <div
+                  data-theme-fixed-surface
+                  data-workflow-step-count
+                  data-active={stepI === i}
                   className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 transition-all duration-500"
                   style={{
                     background: stepI <= i ? col.accent : "rgba(255,255,255,0.07)",
@@ -2021,8 +2069,15 @@ export default function App() {
 
   const col = PALETTE[activeStep];
 
+  useEffect(() => {
+    if (theme !== "light") return;
+    setTilt({ x: 0, y: 0 });
+    setLightPos({ x: 50, y: 50 });
+  }, [theme]);
+
   // Right panel mouse tracking for 3D tilt + specular
   const handlePanelMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (theme === "light") return;
     const target = e.target instanceof Element ? e.target : null;
     if (target?.closest("[data-workflow-model-stage]")) return;
 
@@ -2043,9 +2098,9 @@ export default function App() {
     setLightPos({ x: 50, y: 50 });
   };
   const toggleTheme = () => {
-    setTheme(currentTheme => (currentTheme === "dark" ? "dark" : "dark"));
+    setTheme(currentTheme => (currentTheme === "dark" ? "light" : "dark"));
   };
-  const nextThemeLabel = theme === "dark" ? "dark" : "black";
+  const nextThemeLabel = theme === "dark" ? "light" : "black";
 
   return (
     <div
@@ -2054,7 +2109,7 @@ export default function App() {
       style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
     >
       {/* Ambient radial haze */}
-      <div className="fixed inset-0 pointer-events-none transition-all duration-1000"
+      <div data-light-theme-decoration className="fixed inset-0 pointer-events-none transition-all duration-1000"
         style={{ zIndex: 2, background: `radial-gradient(ellipse 55% 45% at 78% 52%, ${col.glow}, transparent 68%)` }} />
 
       {/* Dot grid */}
@@ -2070,24 +2125,42 @@ export default function App() {
           <span className="text-white font-bold text-xl" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>PromoPlus</span>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-          {["Features", "Workflow", "Pricing", "Customers"].map(n => (
+          {["How It Works", "Approvals", "FAQ"].map(n => (
             <a key={n} href="#" className="hover:text-white transition-colors duration-200">{n}</a>
           ))}
         </nav>
         <div className="flex items-center gap-3">
-          <a href="#" className="hidden md:block text-sm text-slate-400 hover:text-white transition-colors">Sign in</a>
-          {/* <button
+          <button
             type="button"
+            data-theme-fixed-surface
+            data-theme-toggle
             onClick={toggleTheme}
             aria-label={`Switch to ${nextThemeLabel} theme`}
             title={`Switch to ${nextThemeLabel} theme`}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-slate-300 transition-all hover:border-white/20 hover:bg-white/10 active:scale-95"
+            className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-all active:scale-95 ${
+              theme === "light"
+                ? "border-slate-300 bg-white text-slate-900 hover:border-slate-400 hover:bg-slate-50"
+                : "border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10"
+            }`}
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             <span className="hidden sm:inline">{theme === "dark" ? "White" : "Black"}</span>
-          </button> */}
-          <button className="px-4 py-2 text-sm text-white rounded-xl transition-all hover:scale-105 active:scale-95"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 4px 16px rgba(99,102,241,0.38)" }}>
+          </button>
+          {/* <a href="#" className="hidden md:block text-sm text-slate-400 hover:text-white transition-colors">Sign in</a> */}
+          <button
+          type="button"
+            data-theme-fixed-surface
+            data-theme-toggle
+            onClick={toggleTheme}
+            aria-label={`Switch to ${nextThemeLabel} theme`}
+            title={`Switch to ${nextThemeLabel} theme`}
+            className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-all active:scale-95 ${
+              theme === "light"
+                ? "border-slate-300 bg-white text-slate-900 hover:border-slate-400 hover:bg-slate-50"
+                : "border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10"
+            }`}
+            // style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", boxShadow: "0 4px 16px rgba(99,102,241,0.38)" }}
+            >
             Book a Demo
           </button>
         </div>
@@ -2101,12 +2174,14 @@ export default function App() {
         style={{ minHeight: `${WORKFLOW_DESKTOP_SECTION_HEIGHT_VH}vh`, zIndex: 10 }}
       >
         <div
+          data-light-theme-decoration
           className="absolute inset-0"
           style={{
             background: "linear-gradient(100deg, rgba(129,140,248,0.055), rgba(5,5,18,0.18) 42%, rgba(5,5,18,0.04) 78%)",
           }}
         />
         <div
+          data-light-theme-decoration
           className="absolute inset-0 pointer-events-none transition-colors duration-500"
           style={{ background: `radial-gradient(ellipse 58% 44% at ${activeStep % 2 === 0 ? 78 : 22}% 54%, ${col.glow}, transparent 70%)` }}
         />
@@ -2114,7 +2189,7 @@ export default function App() {
         <div className="absolute inset-x-8 bottom-0 h-px bg-white/5" />
 
         <div
-          className="relative mx-auto flex max-w-[1320px] flex-col px-8"
+          className="relative mx-auto flex max-w-[1440px] flex-col px-8"
           style={{ height: `${WORKFLOW_DESKTOP_SECTION_HEIGHT_VH}vh` }}
         >
           {STEPS.map((s, i) => (
@@ -2129,9 +2204,9 @@ export default function App() {
             <div
               data-workflow-card={activeStep}
               data-workflow-card-track
-              className="absolute w-[clamp(330px,27vw,410px)]"
-              onMouseMove={handlePanelMouseMove}
-              onMouseLeave={handlePanelMouseLeave}
+              className="absolute w-[clamp(410px,32vw,500px)]"
+              onMouseMove={theme === "dark" ? handlePanelMouseMove : undefined}
+              onMouseLeave={theme === "dark" ? handlePanelMouseLeave : undefined}
               style={getTravelingWorkflowCardStyle(scrollStep, col.accent)}
             >
               <AnimatePresence mode="wait">
@@ -2144,11 +2219,13 @@ export default function App() {
                   style={{ transformOrigin: "50% 50%", transformStyle: "preserve-3d" }}
                 >
                   <div
+                    data-workflow-hover-tilt
                     style={{
-                      transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
+                      transform: theme === "dark" ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` : "none",
                       transformOrigin: "50% 50%",
                       transformStyle: "preserve-3d",
-                      transition: "transform 0.14s ease-out",
+                      transition: theme === "dark" ? "transform 0.14s ease-out" : "none",
+                      zIndex: 10000,
                     }}
                   >
                     <DesktopWorkflowCard s={STEPS[activeStep]} i={activeStep} lightPos={lightPos} />
@@ -2234,7 +2311,8 @@ export default function App() {
 
               <div className="flex flex-wrap gap-3 mb-8">
                 <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm text-white transition-all hover:scale-105 active:scale-95"
-                  style={{ background: `linear-gradient(135deg, ${col.accent}, #8b5cf6)`, boxShadow: `0 4px 20px ${col.accent}35` }}>
+                  // style={{ background: `linear-gradient(135deg, ${col.accent}, #8b5cf6)`, boxShadow: `0 4px 20px ${col.accent}35` }}
+                  >
                   Book a Demo <ArrowRight className="w-4 h-4" />
                 </button>
                 <button className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all">
@@ -2303,7 +2381,7 @@ export default function App() {
                         >
                           <div className="min-h-full flex items-center py-6 w-full">
                             <div className="relative w-full">
-                              <div
+                              {/* <div
                                 className="absolute inset-3 rounded-3xl pointer-events-none"
                                 style={{
                                   transform: "translate(18px, 22px) scale(0.985)",
@@ -2311,21 +2389,21 @@ export default function App() {
                                   border: `1px solid ${PALETTE[i].border}`,
                                   boxShadow: `0 34px 90px ${PALETTE[i].glow}`,
                                 }}
-                              />
-                              <div
+                              /> */}
+                              {/* <div
                                 className="absolute inset-6 rounded-3xl pointer-events-none"
                                 style={{
                                   transform: "translate(36px, 44px) scale(0.96)",
                                   background: "rgba(255,255,255,0.035)",
                                   border: "1px solid rgba(255,255,255,0.06)",
                                 }}
-                              />
+                              /> */}
 
                             {/* Card */}
                             <div className="w-full rounded-3xl p-7 relative"
                               style={{
                                 background: `linear-gradient(145deg, ${PALETTE[i].bg} 0%, rgba(5,5,18,0.96) 50%, ${PALETTE[i].bg} 100%)`,
-                                border: `1px solid ${PALETTE[i].border}`,
+                                border: `0px solid ${PALETTE[i].border}`,
                                 boxShadow: `0 0 120px ${PALETTE[i].glow}, 0 52px 110px rgba(0,0,0,0.72), -18px -14px 45px rgba(255,255,255,0.035), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -22px 55px rgba(0,0,0,0.35)`,
                               }}>
 
@@ -2398,12 +2476,14 @@ export default function App() {
         style={{ minHeight: `${WORKFLOW_DESKTOP_SECTION_HEIGHT_VH}svh`, zIndex: 10 }}
       >
         <div
+          data-light-theme-decoration
           className="absolute inset-0"
           style={{
             background: "linear-gradient(100deg, rgba(129,140,248,0.055), rgba(5,5,18,0.18) 42%, rgba(5,5,18,0.04) 78%)",
           }}
         />
         <div
+          data-light-theme-decoration
           className="absolute inset-0 pointer-events-none transition-colors duration-500"
           style={{ background: `radial-gradient(ellipse 82% 40% at 50% 64%, ${col.glow}, transparent 72%)` }}
         />
@@ -2444,18 +2524,17 @@ export default function App() {
           Get Started Today
         </div>
         <h3 className="text-3xl font-bold text-white mb-4" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>
-          Ready to streamline your<br />artwork workflow?
+          Take control before your<br />next mistake costs you.
         </h3>
         <p className="text-slate-400 mb-8 max-w-md mx-auto leading-relaxed">
-          Join thousands of promotional product distributors using PromoPlus every day to close deals faster and reduce production errors.
+          Start using PromoPlus today to replace approval chaos with clear records, tracked versions, and production-ready artwork.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4">
-          <button className="flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm text-white transition-all hover:scale-105 active:scale-95"
-            style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)"  }}>
+           <button className={`flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all`}>
             Book a Demo <ArrowRight className="w-4 h-4" />
           </button>
           <button className="flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-medium text-slate-300 border border-white/10 hover:bg-white/5 transition-all">
-            <Play className="w-4 h-4" /> Watch Workflow
+            <Play className="w-4 h-4" /> See How It Works
           </button>
         </div>
       </div>
