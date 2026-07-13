@@ -1390,7 +1390,7 @@ function MobileStepCard({ s, i, inView }: { s: typeof STEPS[0]; i: number; inVie
         </div>
         <div>
           <div className="text-xs font-bold uppercase tracking-[0.2em] mb-1" style={{ color: c.accent }}>{s.label}</div>
-          <h3 className="text-lg font-bold text-white leading-tight" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>{s.heading}</h3>
+          <h3 className="text-lg font-bold text-white leading-tight" style={{ fontFamily: '"Open Sans", sans-serif' }}>{s.heading}</h3>
         </div>
       </div>
       <div className="mb-5"><Visual active={inView} accent={c.accent} /></div>
@@ -1426,18 +1426,14 @@ function DesktopWorkflowCopy({ stepIndex, compact = false }: { stepIndex: number
         </div>
 
         <h2
-          className={`relative font-bold text-white leading-[1.1] ${compact ? "mb-3 text-4xl" : "mb-4 text-5xl"}`}
+          className={`relative  text-white leading-[1.1] ${compact ? "mb-3 text-4xl" : "mb-4 text-5xl"}`}
           style={{
-            fontFamily: '"Bricolage Grotesque", sans-serif',
+            fontFamily: '"Open Sans", sans-serif',
             textShadow: "0 18px 45px rgba(0,0,0,0.62), 0 0 34px rgba(129,140,248,0.18)",
           }}
         >
           From Idea to Mockup<br />
-          <span
-            data-theme-fixed-surface
-            data-workflow-accent-heading
-            style={gradientTextStyle(col.accent)}
-          >
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-50 to-slate-300">
             All in One Flow
           </span>
         </h2>
@@ -1557,7 +1553,7 @@ function DesktopWorkflowCard({ s, i, lightPos }: { s: typeof STEPS[0]; i: number
           </div>
           <div className="pt-1">
             <div className="text-xs font-bold uppercase tracking-[0.22em] mb-1.5" style={{ color: c.accent }}>{s.label}</div>
-            <h3 className="text-2xl font-black text-white leading-tight" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>{s.heading}</h3>
+            <h3 className="text-2xl font-bold text-white leading-tight" style={{ fontFamily: '"Open Sans", sans-serif' }}>{s.heading}</h3>
           </div>
         </div>
 
@@ -1657,7 +1653,7 @@ function MobileWorkflowStepRow({ i, scrollStep }: { i: number; scrollStep: numbe
           <h2
             className="relative font-bold text-white leading-[1.06] mb-2 text-[clamp(2.2rem,9vw,3.25rem)]"
             style={{
-              fontFamily: '"Bricolage Grotesque", sans-serif',
+              fontFamily: '"Open Sans", sans-serif',
               textShadow: "0 18px 45px rgba(0,0,0,0.62), 0 0 34px rgba(129,140,248,0.18)",
             }}
           >
@@ -1713,6 +1709,136 @@ function MobileWorkflowStepRow({ i, scrollStep }: { i: number; scrollStep: numbe
       </div>
 
       <div data-mobile-workflow-card-station={i} className="pointer-events-none absolute bottom-[8svh] left-1/2 h-[38svh] w-[86vw] -translate-x-1/2 opacity-0" />
+    </section>
+  );
+}
+
+function ResponsiveSolutionSection() {
+  const solutionFeatures = [
+    { Icon: FileText, title: "AI-powered", text: "mockup generation" },
+    { Icon: CheckSquare, title: "Structured approval", text: "system with version tracking" },
+    { Icon: Package, title: "Production-ready files", text: "locked after approval" },
+  ];
+
+  const printMethods = [
+    "Embroidery", "Screen Print", "Heat Transfer", "Sublimation",
+    "Laser Engraving", "Foil Stamping", "UV Printing", "DTG",
+  ];
+
+  return (
+    <section id="solution" className="relative z-10 overflow-hidden px-5 pb-10 pt-16 sm:px-8 lg:pb-18 lg:pt-24">
+      <div className="mx-auto max-w-[1720px]">
+        <div className="mx-auto max-w-4xl text-center">
+          <h1 className="text-[clamp(2.5rem,2.8vw,2.8rem)] font-medium leading-[1.08] tracking-[-0.04em] text-white">
+            Your current approval<br className="hidden sm:block" /> process is broken!
+          </h1>
+          <p className="mx-auto mt-7 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
+            Mockups moving through email, WhatsApp, and freelancers might feel normal,<br className="hidden md:block" /> but it creates hidden risks in every project.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <a href="#contact" className="inline-flex items-center gap-3 rounded-2xl border border-white/10 px-6 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-white/20 hover:bg-white/5">
+              Book a Demo <ArrowRight className="h-4 w-4" />
+            </a>
+            <a href="#workflow" className="inline-flex items-center gap-3 rounded-2xl border border-white/10 px-6 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-white/20 hover:bg-white/5">
+              <Play className="h-4 w-4" /> See How It Works
+            </a>
+          </div>
+        </div>
+
+        <div className="mt-20 grid gap-14 xl:mt-28 xl:grid-cols-[0.92fr_1.08fr] xl:items-end xl:gap-10">
+          <div className="pb-2 text-center xl:pb-12">
+            <div className="inline-flex rounded-full bg-white/6 px-4 py-1.5 text-sm font-semibold text-slate-400">Solution</div>
+            <h2 className="mx-auto mt-6 max-w-4xl text-[clamp(1.75rem,2.2vw,2.2rem)] font-normal leading-[1.16] tracking-[-0.035em] text-white">
+              One system.<br />Total control over every Artwork.
+            </h2>
+            <p className="mx-auto mt-7 max-w-3xl text-base leading-7 text-slate-400 sm:text-lg">
+              PromoPlus replaces your messy workflow with a structured approval system built for distributors.
+            </p>
+
+            <div className="mt-12 grid gap-8 sm:grid-cols-3 sm:gap-5 lg:mt-16">
+              {solutionFeatures.map(({ Icon, title, text }) => (
+                <div key={title} className="flex flex-col items-center">
+                  <Icon className="h-12 w-12 stroke-[1.25] text-slate-200 sm:h-14 sm:w-14" />
+                  <h3 className="mt-5 text-base text-slate-50 leading-tight">{title}</h3>
+                  <p className="mt-2 text-sm text-slate-500">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div data-theme-fixed-surface className="relative overflow-hidden rounded-t-[1.6rem] border border-slate-200 bg-[#f8fafc] text-slate-900">
+            <div className="flex h-16 items-center gap-4 bg-gradient-to-r from-[#d9b6a5] via-[#f4f2f4] to-[#aaa1f5] px-4 sm:px-5">
+              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-slate-600 text-xs font-black text-white">PP</div>
+              <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-white/90 px-4 text-xs text-slate-500">
+                <Search className="h-4 w-4" />
+                <span className="truncate">Search projects, clients...</span>
+                <span className="ml-auto hidden rounded bg-slate-100 px-2 py-1 font-mono text-[10px] sm:inline">⌘K</span>
+              </div>
+              <div className="hidden items-center gap-2 sm:flex">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold">JD</div>
+                <div className="hidden text-left lg:block"><div className="text-xs font-bold">John Doe</div><div className="text-[10px] text-slate-500">Distributor</div></div>
+              </div>
+            </div>
+
+            <div className="grid min-h-[520px] grid-cols-[1fr] sm:grid-cols-[150px_1fr] lg:grid-cols-[58px_180px_1fr_190px]">
+              <aside className="hidden border-r border-slate-200 bg-white px-2 py-5 lg:block">
+                {["Upload", "Library", "Comments", "Activity"].map((item, index) => (
+                  <div key={item} className="mb-4 flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[8px] text-slate-500">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200">{index + 1}</span>{item}
+                  </div>
+                ))}
+              </aside>
+
+              <aside className="hidden border-r border-slate-200 bg-white p-3 sm:block">
+                <div className="text-xs font-bold">Upload Manager</div>
+                <button className="mt-4 w-full rounded-lg bg-purple-600 px-3 py-2 text-[10px] font-bold text-white">Upload Logo</button>
+                <div className="mt-4 flex gap-4 border-b border-slate-200 pb-2 text-[9px]"><span>Images</span><span className="font-bold text-blue-600">Folders</span></div>
+                <button className="mt-3 w-full rounded-lg border border-slate-200 px-2 py-2 text-[9px] font-semibold">+ Create New Folder</button>
+                {["Shirt Folder", "Brand Assets"].map(folder => (
+                  <div key={folder} className="mt-3 rounded-lg border border-slate-200 p-2 text-left">
+                    <div className="text-[9px] font-bold">{folder}</div><div className="text-[8px] text-slate-500">5 images</div>
+                  </div>
+                ))}
+              </aside>
+
+              <main className="min-w-0 bg-[#fbfcfe] p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div><div className="text-sm font-bold">Product Name <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[8px] text-amber-700">Pending</span></div><div className="mt-1 text-[9px] text-slate-500">Project Name · Acme Corporation</div></div>
+                  <span className="text-[9px] text-slate-500">Preview</span>
+                </div>
+                <div className="mt-5 flex min-h-[330px] items-center justify-center rounded-xl bg-white p-5">
+                  <div className="relative h-56 w-52 sm:h-64 sm:w-60">
+                    <div
+                      className="absolute inset-0 bg-slate-100"
+                      style={{ clipPath: "polygon(30% 5%, 42% 0, 58% 0, 70% 5%, 100% 22%, 88% 42%, 76% 34%, 76% 100%, 24% 100%, 24% 34%, 12% 42%, 0 22%)" }}
+                    />
+                    <div className="absolute left-1/2 top-[42%] flex h-16 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg bg-[#95bf47] text-lg font-black text-white">S</div>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <span className="h-12 w-12 rounded-lg border border-slate-200 bg-white" />
+                  <span className="h-12 w-12 rounded-lg border-2 border-purple-400 bg-slate-100" />
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-xl">+</span>
+                </div>
+              </main>
+
+              <aside className="hidden border-l border-slate-200 bg-white p-3 lg:block">
+                <div className="text-xs font-bold">Popular types of printing</div>
+                <div className="mt-3 rounded-lg border border-slate-200 px-3 py-2 text-[9px] text-slate-400">Search printing method</div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {printMethods.map((method, index) => (
+                    <div key={method} className="rounded-lg border border-slate-200 p-1.5">
+                      <div className={`h-10 rounded ${index % 3 === 0 ? "bg-[#d8d6fd]" : index % 3 === 1 ? "bg-[#ffbd9a]" : "bg-[#99feec]"}`} />
+                      <div className="mt-1 truncate text-[7px] font-semibold">{method}</div>
+                    </div>
+                  ))}
+                </div>
+                <button className="mt-5 w-full rounded-lg bg-[#c1ff00] px-3 py-2 text-[9px] font-bold">Generate Mockups</button>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -2106,7 +2232,7 @@ export default function App() {
     <div
       className="promoplus-app bg-background text-foreground min-h-screen"
       data-theme={theme}
-      style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+      style={{ fontFamily: '"Open Sans", sans-serif' }}
     >
       {/* Ambient radial haze */}
       <div data-light-theme-decoration className="fixed inset-0 pointer-events-none transition-all duration-1000"
@@ -2122,7 +2248,7 @@ export default function App() {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold">PP</span>
           </div>
-          <span className="text-white font-bold text-xl" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>PromoPlus</span>
+          <span className="text-white font-bold text-xl" style={{ fontFamily: '"Open Sans", sans-serif' }}>PromoPlus</span>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm text-slate-400">
           {["How It Works", "Approvals", "FAQ"].map(n => (
@@ -2165,7 +2291,8 @@ export default function App() {
           </button>
         </div>
       </header>
-
+      {/* Here we have to update our new responsive design */}
+      <ResponsiveSolutionSection />
       {/* ── Desktop sticky scroll section ── */}
       <div
         ref={sectionRef}
@@ -2268,9 +2395,9 @@ export default function App() {
               </motion.div>
 
               <h2
-                className="relative font-bold text-white leading-[1.1] mb-4 text-5xl"
+                className="relative  text-white leading-[1.1] mb-4 text-5xl"
                 style={{
-                  fontFamily: '"Bricolage Grotesque", sans-serif',
+                  fontFamily: '"Open Sans", sans-serif',
                   textShadow: "0 18px 45px rgba(0,0,0,0.62), 0 0 34px rgba(129,140,248,0.18)",
                 }}
               >
@@ -2427,7 +2554,7 @@ export default function App() {
                                 </div>
                                 <div className="pt-1">
                                   <div className="text-xs font-bold uppercase tracking-[0.22em] mb-1.5" style={{ color: PALETTE[i].accent }}>{s.label}</div>
-                                  <h3 className="text-2xl font-black text-white leading-tight" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>{s.heading}</h3>
+                                  <h3 className="text-2xl font-black text-white leading-tight" style={{ fontFamily: '"Open Sans", sans-serif' }}>{s.heading}</h3>
                                 </div>
                               </div>
 
@@ -2523,7 +2650,7 @@ export default function App() {
           style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)" }}>
           Get Started Today
         </div>
-        <h3 className="text-3xl font-bold text-white mb-4" style={{ fontFamily: '"Bricolage Grotesque", sans-serif' }}>
+        <h3 className="text-3xl font-bold text-white mb-4" style={{ fontFamily: '"Open Sans", sans-serif' }}>
           Take control before your<br />next mistake costs you.
         </h3>
         <p className="text-slate-400 mb-8 max-w-md mx-auto leading-relaxed">
